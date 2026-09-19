@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { QueryProvider } from '@/providers/QueryProvider';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
@@ -32,6 +32,12 @@ function PageLoader() {
   return <LoadingState text="Loading page..." />;
 }
 
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const accessToken = localStorage.getItem('accessToken');
+
+  return accessToken ? children : <Navigate to="/login" replace />;
+}
+
 export default function App() {
   return (
     <QueryProvider>
@@ -42,10 +48,24 @@ export default function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-            <Route path="/onboarding" element={<OnboardingPage />} />
-            <Route path="/track/:trackingId" element={<TrackingPage />} />
+            <Route
+              path="/onboarding"
+              element={
+                <ProtectedRoute>
+                  <OnboardingPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/track/:trackingId"
+              element={
+                <ProtectedRoute>
+                  <TrackingPage />
+                </ProtectedRoute>
+              }
+            />
 
-            <Route element={<DashboardLayout />}>
+            <Route element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/deliveries" element={<DeliveriesPage />} />
               <Route path="/deliveries/:id" element={<DeliveryDetailsPage />} />

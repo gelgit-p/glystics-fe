@@ -43,7 +43,7 @@ export function Sidebar({ collapsed, setCollapsed }: { collapsed: boolean; setCo
         </div>
         {!collapsed && (
           <div className="flex flex-col">
-            <span className="text-sm font-bold leading-tight">WhatsApp Notify</span>
+            <span className="text-sm font-bold leading-tight">Glystics</span>
             <span className="text-[10px] text-muted-foreground">Logistics Platform</span>
           </div>
         )}

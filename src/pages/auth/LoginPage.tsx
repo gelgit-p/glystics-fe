@@ -18,6 +18,8 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
+const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+
 export default function LoginPage() {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
@@ -29,12 +31,44 @@ export default function LoginPage() {
     formState: { errors },
   } = useForm<FormData>({ resolver: zodResolver(schema) });
 
-  const onSubmit = async (_data: FormData) => {
+  const onSubmit = async (data: FormData) => {
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 800));
-    setLoading(false);
-    toast.success('Welcome back!');
-    navigate('/dashboard');
+
+    try {
+      const response = await fetch(`${API_URL}/auth/login`, {
+        method: 'POST',
+        headers: {
+          accept: '*/*',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => null);
+        const message = Array.isArray(error?.message) ? error.message.join(', ') : error?.message;
+        throw new Error(message || 'Unable to sign in');
+      }
+
+      const result = (await response.json()) as {
+        accessToken?: string;
+        refreshToken?: string;
+      };
+
+      if (!result.accessToken || !result.refreshToken) {
+        throw new Error('Invalid login response');
+      }
+
+      localStorage.setItem('accessToken', result.accessToken);
+      localStorage.setItem('refreshToken', result.refreshToken);
+
+      toast.success('Welcome back!');
+      navigate('/dashboard');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Unable to sign in');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

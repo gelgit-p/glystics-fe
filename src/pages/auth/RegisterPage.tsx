@@ -25,6 +25,8 @@ const schema = z
 
 type FormData = z.infer<typeof schema>;
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 export default function RegisterPage() {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
@@ -36,12 +38,37 @@ export default function RegisterPage() {
     formState: { errors },
   } = useForm<FormData>({ resolver: zodResolver(schema) });
 
-  const onSubmit = async (_data: FormData) => {
+  const onSubmit = async (data: FormData) => {
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 800));
-    setLoading(false);
-    toast.success('Account created successfully!');
-    navigate('/onboarding');
+
+    try {
+      const response = await fetch(`${API_URL}/auth/signup`, {
+        method: 'POST',
+        headers: {
+          accept: '*/*',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: data.email,
+          password: data.password,
+          businessName: data.businessName,
+          fullName: data.fullName
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => null);
+        const message = Array.isArray(error?.message) ? error.message.join(', ') : error?.message;
+        throw new Error(message || 'Unable to create account');
+      }
+
+      toast.success('Account created successfully. Please sign in.');
+      navigate('/login');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Unable to create account');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
