@@ -38,7 +38,7 @@ export default function LandingPage() {
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
               <MessageCircle className="h-5 w-5" />
             </div>
-            <span className="text-lg font-bold">WhatsApp Notify</span>
+            <span className="text-lg font-bold">Glystics</span>
           </div>
           <div className="hidden items-center gap-8 md:flex">
             <a href="#features" className="text-sm font-medium text-muted-foreground hover:text-foreground">Features</a>
