@@ -50,17 +50,19 @@ export default function LoginPage() {
         throw new Error(message || 'Unable to sign in');
       }
 
-      const result = (await response.json()) as {
-        accessToken?: string;
-        refreshToken?: string;
-      };
+      const result = (await response.json()) as { 
+        accessToken?: string; 
+        refreshToken?: string; 
+        user?: { id: string; };
+       };
 
-      if (!result.accessToken || !result.refreshToken) {
+      if (!result.accessToken || !result.refreshToken || !result.user?.id) {
         throw new Error('Invalid login response');
       }
 
       localStorage.setItem('accessToken', result.accessToken);
       localStorage.setItem('refreshToken', result.refreshToken);
+      localStorage.setItem('userId', result.user.id);
 
       toast.success('Welcome back!');
       navigate('/dashboard');
