@@ -68,7 +68,7 @@ export default function OnboardingPage() {
   };
 
   const finish = () => {
-    toast.success('Setup complete! Welcome to WhatsApp Notify.');
+    toast.success('Setup complete! Welcome to Glystics.');
     navigate('/dashboard');
   };
 
@@ -81,7 +81,7 @@ export default function OnboardingPage() {
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
               <MessageCircle className="h-5 w-5" />
             </div>
-            <span className="font-bold">WhatsApp Notify</span>
+            <span className="font-bold">Glystics</span>
           </div>
           <span className="text-sm text-muted-foreground">Onboarding</span>
         </div>

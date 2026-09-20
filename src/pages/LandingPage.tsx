@@ -22,7 +22,7 @@ const features = [
   { icon: Smartphone, title: 'Notification templates', desc: 'Pre-approved WhatsApp templates for every delivery event, fully customizable.' },
   { icon: Zap, title: 'Delivery event automation', desc: 'Build workflows that react to delivery events and notify customers instantly.' },
   { icon: BarChart3, title: 'Analytics', desc: 'Track delivery rates, message engagement, and customer response times.' },
-  { icon: Code, title: 'REST API', desc: 'Integrate WhatsApp Notify directly into your existing logistics systems.' },
+  { icon: Code, title: 'REST API', desc: 'Integrate Glystics directly into your existing logistics systems.' },
   { icon: Webhook, title: 'Webhooks', desc: 'Get real-time callbacks for every message and delivery event.' },
 ];
 
@@ -227,7 +227,7 @@ export default function LandingPage() {
             Start communicating with your customers automatically.
           </h2>
           <p className="mt-3 text-primary-foreground/80">
-            Join logistics companies using WhatsApp Notify to keep customers informed at every step.
+            Join logistics companies using Glystics to keep customers informed at every step.
           </p>
           <Link
             to="/register"
@@ -245,7 +245,7 @@ export default function LandingPage() {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
               <MessageCircle className="h-4 w-4" />
             </div>
-            <span className="font-semibold">WhatsApp Notify</span>
+            <span className="font-semibold">Glystics</span>
           </div>
           <p className="text-sm text-muted-foreground">WhatsApp notifications for modern logistics.</p>
         </div>

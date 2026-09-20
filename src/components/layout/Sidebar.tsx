@@ -113,7 +113,7 @@ export function MobileSidebar({ open, onClose }: { open: boolean; onClose: () =>
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <MessageCircle className="h-5 w-5" />
           </div>
-          <span className="text-sm font-bold">WhatsApp Notify</span>
+          <span className="text-sm font-bold">Glystics</span>
         </div>
         <nav className="flex-1 space-y-1 overflow-y-auto scrollbar-thin p-3">
           {navItems.map((item) => {

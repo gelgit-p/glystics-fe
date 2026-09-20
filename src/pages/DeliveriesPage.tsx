@@ -48,7 +48,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 
 const statusOptions = ['all', 'Created', 'Pickup Scheduled', 'Picked Up', 'In Transit', 'Out for Delivery', 'Delivered', 'Failed'];
-const courierOptions = ['all', 'Swift Rider', 'ExpressGo', 'DeliverFast', 'Nigeria Post', 'Flash Courier'];
+// const courierOptions = ['all', 'Swift Rider', 'ExpressGo', 'DeliverFast', 'Nigeria Post', 'Flash Courier'];
 const categories = ['Electronics', 'Documents', 'Clothing', 'Food', 'Pharmacy', 'Books', 'Other'];
 const deliveryTypes = ['Standard', 'Express'];
 
@@ -202,15 +202,6 @@ export default function DeliveriesPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="courier">Courier</Label>
-                    <Select name="courier" defaultValue="Swift Rider">
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {courierOptions.slice(1).map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
                   <div className="space-y-1.5 sm:col-span-2">
                     <Label htmlFor="instructions">Delivery instructions</Label>
                     <Textarea id="instructions" name="instructions" placeholder="Handle with care. Ring bell on arrival." rows={2} />
@@ -244,12 +235,6 @@ export default function DeliveriesPage() {
           <SelectTrigger className="w-full sm:w-[180px]"><SelectValue placeholder="Status" /></SelectTrigger>
           <SelectContent>
             {statusOptions.map((s) => <SelectItem key={s} value={s}>{s === 'all' ? 'All statuses' : s}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={courier} onValueChange={setCourier}>
-          <SelectTrigger className="w-full sm:w-[160px]"><SelectValue placeholder="Courier" /></SelectTrigger>
-          <SelectContent>
-            {courierOptions.map((c) => <SelectItem key={c} value={c}>{c === 'all' ? 'All couriers' : c}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>

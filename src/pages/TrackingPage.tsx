@@ -40,7 +40,7 @@ export default function TrackingPage() {
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
               <MessageCircle className="h-5 w-5" />
             </div>
-            <span className="font-bold">WhatsApp Notify</span>
+            <span className="font-bold">Glystics</span>
           </Link>
           <Link to="/login" className="text-sm font-medium text-muted-foreground hover:text-foreground">
             Sign in

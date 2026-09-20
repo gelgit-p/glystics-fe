@@ -114,7 +114,7 @@ function DisconnectedView({ onConnect }: { onConnect: () => void }) {
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">How to connect</p>
               {[
                 { icon: Building2, title: 'Verify your business', desc: 'Confirm your business name and phone number.' },
-                { icon: Shield, title: 'Authenticate with Meta', desc: 'Authorize WhatsApp Notify via your Meta Business account.' },
+                { icon: Shield, title: 'Authenticate with Meta', desc: 'Authorize Glystics via your Meta Business account.' },
                 { icon: Bell, title: 'Start sending notifications', desc: 'Once connected, automated messages begin sending immediately.' },
               ].map((step, i) => (
                 <div key={i} className="flex items-start gap-3 rounded-lg border border-border p-3">
