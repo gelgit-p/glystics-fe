@@ -544,21 +544,17 @@ export default function WhatsAppPage() {
         'Launching WhatsApp Embedded Signup...',
       );
 
-      window.FB.login(
+window.FB.login(
   (response: any) => {
-    console.log(
-      'Facebook Login response:',
-      response,
-    );
+    console.log('Facebook Login response:', response);
 
     if (!response?.authResponse) {
       console.log(
         'No Facebook authResponse returned.',
       );
 
-      // Do not immediately treat this as failure.
       // Embedded Signup completion is handled
-      // through WA_EMBEDDED_SIGNUP / FINISH.
+      // by WA_EMBEDDED_SIGNUP / FINISH.
       return;
     }
 
@@ -573,6 +569,10 @@ export default function WhatsAppPage() {
   },
   {
     config_id: '1413007240957562',
+
+    response_type: 'code',
+
+    override_default_response_type: true,
 
     extras: {
       version: 'v4',
