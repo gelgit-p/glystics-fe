@@ -513,7 +513,7 @@ export default function WhatsAppPage() {
         description="Manage your WhatsApp Business connection and message health."
       />
 
-      {!conn.connected ? (
+     {conn.status !== 'Connected' ? (
         <div className="space-y-6">
           <div className="overflow-hidden rounded-xl border border-border bg-card">
             <div className="border-b border-border bg-red-50/50 px-6 py-4 dark:bg-red-950/20">
