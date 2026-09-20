@@ -1,5 +1,7 @@
 let sdkPromise: Promise<void> | null = null;
 
+const FACEBOOK_APP_ID = '1094705089173300';
+
 export function loadFacebookSDK(): Promise<void> {
   if (window.FB) {
     return Promise.resolve();
@@ -11,14 +13,21 @@ export function loadFacebookSDK(): Promise<void> {
 
   sdkPromise = new Promise((resolve, reject) => {
     window.fbAsyncInit = () => {
-      window.FB.init({
-        appId: '1094705089173300',
-        cookie: true,
-        xfbml: true,
-        version: 'v25.0',
-      });
+      try {
+        window.FB.init({
+          appId: FACEBOOK_APP_ID,
+          cookie: true,
+          xfbml: true,
+          version: 'v25.0',
+        });
 
-      resolve();
+        console.log('Facebook SDK initialized');
+
+        resolve();
+      } catch (error) {
+        sdkPromise = null;
+        reject(error);
+      }
     };
 
     const existingScript = document.getElementById(
@@ -26,6 +35,12 @@ export function loadFacebookSDK(): Promise<void> {
     );
 
     if (existingScript) {
+      // The script already exists.
+      // If FB is already available, initialize through fbAsyncInit.
+      if (window.FB) {
+        window.fbAsyncInit();
+      }
+
       return;
     }
 

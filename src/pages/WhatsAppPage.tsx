@@ -33,7 +33,6 @@ import {
 } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { loadFacebookSDK } from '@/lib/facebook';
 
 function InfoRow({
   icon: Icon,
@@ -263,6 +262,74 @@ function DisconnectedView({
   );
 }
 
+const FACEBOOK_APP_ID = '1094705089173300';
+
+let sdkPromise: Promise<void> | null = null;
+
+const loadFacebookSDK = (): Promise<void> => {
+  if (window.FB) {
+    return Promise.resolve();
+  }
+
+  if (sdkPromise) {
+    return sdkPromise;
+  }
+
+  sdkPromise = new Promise((resolve, reject) => {
+    window.fbAsyncInit = () => {
+      try {
+        window.FB.init({
+          appId: FACEBOOK_APP_ID,
+          cookie: true,
+          xfbml: true,
+          version: 'v25.0',
+        });
+
+        console.log('Facebook SDK initialized');
+
+        resolve();
+      } catch (error) {
+        sdkPromise = null;
+        reject(error);
+      }
+    };
+
+    const existingScript =
+      document.getElementById('facebook-jssdk');
+
+    if (existingScript) {
+      return;
+    }
+
+    const script = document.createElement('script');
+
+    script.id = 'facebook-jssdk';
+    script.src =
+      'https://connect.facebook.net/en_US/sdk.js';
+
+    script.async = true;
+    script.defer = true;
+
+    script.onerror = () => {
+      sdkPromise = null;
+      reject(
+        new Error('Failed to load Facebook SDK'),
+      );
+    };
+
+    document.body.appendChild(script);
+  });
+
+  return sdkPromise;
+};
+
+declare global {
+  interface Window {
+    FB: any;
+    fbAsyncInit: () => void;
+  }
+}
+
 export default function WhatsAppPage() {
   const queryClient = useQueryClient();
 
@@ -308,8 +375,9 @@ export default function WhatsAppPage() {
   /*
    * Listen for Meta Embedded Signup events.
    */
+
   useEffect(() => {
-  const handleMessage = (event: MessageEvent) => {
+  const handleMessage = async (event: MessageEvent) => {
     // Only accept messages from Meta
     if (
       event.origin !== 'https://www.facebook.com' &&
@@ -317,6 +385,8 @@ export default function WhatsAppPage() {
     ) {
       return;
     }
+
+    console.log('Meta message received:', event);
 
     let data: any;
 
@@ -330,14 +400,21 @@ export default function WhatsAppPage() {
       return;
     }
 
-    console.log('Meta postMessage:', data);
+    console.log('Parsed Meta message:', data);
 
     if (data?.type !== 'WA_EMBEDDED_SIGNUP') {
       return;
     }
 
-    console.log('WhatsApp Embedded Signup event:', data);
+    console.log(
+      'WhatsApp Embedded Signup event:',
+      data.event,
+      data.data,
+    );
 
+    // -----------------------------
+    // SIGNUP FINISHED
+    // -----------------------------
     if (data.event === 'FINISH') {
       const wabaId = data.data?.waba_id;
       const phoneNumberId = data.data?.phone_number_id;
@@ -346,6 +423,11 @@ export default function WhatsAppPage() {
       console.log('Phone Number ID:', phoneNumberId);
 
       if (!wabaId || !phoneNumberId) {
+        console.error(
+          'Missing WABA ID or Phone Number ID',
+          data,
+        );
+
         setConnecting(false);
 
         toast.error(
@@ -355,30 +437,47 @@ export default function WhatsAppPage() {
         return;
       }
 
-      // IMPORTANT:
-      // Send these IDs to your backend here.
-      //
-      // await api.connectWhatsApp({
-      //   wabaId,
-      //   phoneNumberId,
-      // });
+      try {
+        setConnecting(true);
 
-      setConnecting(false);
+        // Save the WhatsApp connection in your backend
+        await api.connectWhatsApp();
+        // {
+        //   wabaId,
+        //   phoneNumberId,
+        // }
 
-      await queryClient.invalidateQueries({
-        queryKey: ['whatsapp-connection'],
-      });
+        await queryClient.invalidateQueries({
+          queryKey: ['whatsapp-connection'],
+        });
 
-      toast.success(
-        'WhatsApp Business account connected successfully',
-      );
+        toast.success(
+          'WhatsApp Business account connected successfully',
+        );
+      } catch (error) {
+        console.error(
+          'Failed to save WhatsApp connection:',
+          error,
+        );
+
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : 'Failed to save WhatsApp connection',
+        );
+      } finally {
+        setConnecting(false);
+      }
 
       return;
     }
 
+    // -----------------------------
+    // USER CANCELLED
+    // -----------------------------
     if (data.event === 'CANCEL') {
       console.log(
-        'Embedded Signup cancelled:',
+        'WhatsApp Embedded Signup cancelled:',
         data.data,
       );
 
@@ -391,9 +490,12 @@ export default function WhatsAppPage() {
       return;
     }
 
+    // -----------------------------
+    // META ERROR
+    // -----------------------------
     if (data.event === 'ERROR') {
       console.error(
-        'Embedded Signup error:',
+        'WhatsApp Embedded Signup error:',
         data.data,
       );
 
@@ -402,10 +504,15 @@ export default function WhatsAppPage() {
       toast.error(
         'WhatsApp Embedded Signup failed',
       );
+
+      return;
     }
   };
 
-  window.addEventListener('message', handleMessage);
+  window.addEventListener(
+    'message',
+    handleMessage,
+  );
 
   return () => {
     window.removeEventListener(
@@ -438,61 +545,40 @@ export default function WhatsAppPage() {
       );
 
       window.FB.login(
-        (response) => {
-          console.log(
-            'Facebook Login response:',
-            response,
-          );
+  (response: any) => {
+    console.log(
+      'Facebook Login response:',
+      response,
+    );
 
-          /*
-           * User cancelled Facebook/Meta login.
-           */
-          if (!response?.authResponse) {
-            console.log(
-              'Facebook Login was cancelled',
-            );
-
-            setConnecting(false);
-
-            toast.info(
-              'WhatsApp connection was cancelled',
-            );
-
-            return;
-          }
-
-          /*
-           * Facebook login succeeded.
-           *
-           * DO NOT set connecting=false here.
-           *
-           * The Embedded Signup flow is still running.
-           * Wait for WA_EMBEDDED_SIGNUP / FINISH.
-           */
-          console.log(
-            'Facebook authentication successful',
-          );
-
-          console.log(
-            'Auth response:',
-            response.authResponse,
-          );
-        },
-        {
-          config_id: '1413007240957562',
-
-          /*
-           * Required because we need an authorization code.
-           */
-          response_type: 'code',
-
-          override_default_response_type: true,
-
-          extras: {
-            version: 'v4',
-          },
-        },
+    if (!response?.authResponse) {
+      console.log(
+        'No Facebook authResponse returned.',
       );
+
+      // Do not immediately treat this as failure.
+      // Embedded Signup completion is handled
+      // through WA_EMBEDDED_SIGNUP / FINISH.
+      return;
+    }
+
+    console.log(
+      'Facebook authentication successful',
+    );
+
+    console.log(
+      'Auth response:',
+      response.authResponse,
+    );
+  },
+  {
+    config_id: '1413007240957562',
+
+    extras: {
+      version: 'v4',
+    },
+  },
+);
     } catch (error) {
       console.error(
         'Failed to launch WhatsApp Embedded Signup:',
