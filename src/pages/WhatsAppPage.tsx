@@ -309,148 +309,111 @@ export default function WhatsAppPage() {
    * Listen for Meta Embedded Signup events.
    */
   useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      /*
-       * IMPORTANT:
-       * These must be actual origins, NOT markdown URLs.
-       */
-      if (
-        event.origin !== 'https://www.facebook.com' &&
-        event.origin !== 'https://web.facebook.com'
-      ) {
-        return;
-      }
+  const handleMessage = (event: MessageEvent) => {
+    // Only accept messages from Meta
+    if (
+      event.origin !== 'https://www.facebook.com' &&
+      event.origin !== 'https://web.facebook.com'
+    ) {
+      return;
+    }
 
-      let data: any;
+    let data: any;
 
-      try {
-        data =
-          typeof event.data === 'string'
-            ? JSON.parse(event.data)
-            : event.data;
-      } catch (error) {
-        console.error(
-          'Failed to parse Facebook message:',
-          error,
-        );
-        return;
-      }
+    try {
+      data =
+        typeof event.data === 'string'
+          ? JSON.parse(event.data)
+          : event.data;
+    } catch (error) {
+      console.error('Failed to parse Meta message:', error);
+      return;
+    }
 
-      console.log(
-        'Meta message received:',
-        data,
-      );
+    console.log('Meta postMessage:', data);
 
-      if (data?.type !== 'WA_EMBEDDED_SIGNUP') {
-        return;
-      }
+    if (data?.type !== 'WA_EMBEDDED_SIGNUP') {
+      return;
+    }
 
-      console.log(
-        'WhatsApp Embedded Signup event:',
-        data,
-      );
+    console.log('WhatsApp Embedded Signup event:', data);
 
-      /*
-       * Signup completed.
-       */
-      if (data.event === 'FINISH') {
-        const wabaId = data.data?.waba_id;
-        const phoneNumberId =
-          data.data?.phone_number_id;
+    if (data.event === 'FINISH') {
+      const wabaId = data.data?.waba_id;
+      const phoneNumberId = data.data?.phone_number_id;
 
-        console.log('WABA ID:', wabaId);
-        console.log(
-          'Phone Number ID:',
-          phoneNumberId,
-        );
+      console.log('WABA ID:', wabaId);
+      console.log('Phone Number ID:', phoneNumberId);
 
-        if (!wabaId || !phoneNumberId) {
-          console.error(
-            'Missing WABA ID or Phone Number ID',
-            data,
-          );
-
-          setConnecting(false);
-
-          toast.error(
-            'Meta completed signup but did not return the WhatsApp account information.',
-          );
-
-          return;
-        }
-
-        /*
-         * IMPORTANT:
-         * This is where you should call your backend.
-         *
-         * Example:
-         *
-         * await api.connectWhatsApp({
-         *   wabaId,
-         *   phoneNumberId,
-         * });
-         */
-
-        setConnecting(false);
-
-        queryClient.invalidateQueries({
-          queryKey: ['whatsapp-connection'],
-        });
-
-        toast.success(
-          'WhatsApp Business account connected successfully',
-        );
-
-        return;
-      }
-
-      /*
-       * User cancelled signup.
-       */
-      if (data.event === 'CANCEL') {
-        console.log(
-          'Embedded Signup cancelled:',
-          data.data,
-        );
-
-        setConnecting(false);
-
-        toast.info(
-          'WhatsApp connection was cancelled',
-        );
-
-        return;
-      }
-
-      /*
-       * Meta returned an error.
-       */
-      if (data.event === 'ERROR') {
-        console.error(
-          'Embedded Signup error:',
-          data.data,
-        );
-
+      if (!wabaId || !phoneNumberId) {
         setConnecting(false);
 
         toast.error(
-          'WhatsApp Embedded Signup failed',
+          'Meta completed signup but did not return the WhatsApp account information.',
         );
-      }
-    };
 
-    window.addEventListener(
+        return;
+      }
+
+      // IMPORTANT:
+      // Send these IDs to your backend here.
+      //
+      // await api.connectWhatsApp({
+      //   wabaId,
+      //   phoneNumberId,
+      // });
+
+      setConnecting(false);
+
+      await queryClient.invalidateQueries({
+        queryKey: ['whatsapp-connection'],
+      });
+
+      toast.success(
+        'WhatsApp Business account connected successfully',
+      );
+
+      return;
+    }
+
+    if (data.event === 'CANCEL') {
+      console.log(
+        'Embedded Signup cancelled:',
+        data.data,
+      );
+
+      setConnecting(false);
+
+      toast.info(
+        'WhatsApp connection was cancelled',
+      );
+
+      return;
+    }
+
+    if (data.event === 'ERROR') {
+      console.error(
+        'Embedded Signup error:',
+        data.data,
+      );
+
+      setConnecting(false);
+
+      toast.error(
+        'WhatsApp Embedded Signup failed',
+      );
+    }
+  };
+
+  window.addEventListener('message', handleMessage);
+
+  return () => {
+    window.removeEventListener(
       'message',
       handleMessage,
     );
-
-    return () => {
-      window.removeEventListener(
-        'message',
-        handleMessage,
-      );
-    };
-  }, [queryClient]);
+  };
+}, [queryClient]);
 
   /*
    * Launch Meta WhatsApp Embedded Signup.
