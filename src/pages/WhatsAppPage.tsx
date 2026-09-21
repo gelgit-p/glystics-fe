@@ -352,6 +352,33 @@ const logFacebookDetails = async (loginResponse: any) => {
   console.log('Expires in (s):', auth.expiresIn);
   console.log('Data access expires at:', auth.data_access_expiration_time);
 
+  let getUserId = localStorage.getItem('userId')
+    const saveFacebookConnection = async (authResponse: any) => {
+    const response = await fetch(
+      `${process.env.API_URL}/auth/update-user/${getUserId}`,
+      {
+        method: 'POST',
+        headers: {
+          accept: '*/*',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          facebookAccessToken: authResponse.accessToken,
+          grantedScopes: authResponse.grantedScopes,
+          accessTokenExpiresIn: String(authResponse.expiresIn),
+          facebookConnectStatus: true,
+        }),
+      },
+    );
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.message || 'Failed to save Facebook connection');
+    }
+
+    return response.json();
+  };
+
   const calls: Array<[string, string, Record<string, any>]> = [
     ['Profile (/me)', '/me', { fields: 'id,name,email' }],
     ['Permissions (/me/permissions)', '/me/permissions', {}],
