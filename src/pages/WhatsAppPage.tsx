@@ -34,12 +34,12 @@ import {
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
-declare global {
-  interface Window {
-    FB: any;
-    fbAsyncInit?: () => void;
-  }
-}
+// Local alias instead of `declare global`, so it can't clash with any
+// existing Facebook SDK typings in the project.
+const fbWindow = window as unknown as {
+  FB?: any;
+  fbAsyncInit?: () => void;
+};
 
 function InfoRow({
   icon: Icon,
@@ -275,7 +275,7 @@ const FACEBOOK_CONFIG_ID = '1413007240957562';
 let sdkPromise: Promise<void> | null = null;
 
 const loadFacebookSDK = (): Promise<void> => {
-  if (window.FB) {
+  if (fbWindow.FB) {
     return Promise.resolve();
   }
 
@@ -284,9 +284,9 @@ const loadFacebookSDK = (): Promise<void> => {
   }
 
   sdkPromise = new Promise((resolve, reject) => {
-    window.fbAsyncInit = () => {
+    fbWindow.fbAsyncInit = () => {
       try {
-        window.FB.init({
+        fbWindow.FB.init({
           appId: FACEBOOK_APP_ID,
           cookie: true,
           xfbml: true,
@@ -463,7 +463,7 @@ export default function WhatsAppPage() {
       await loadFacebookSDK();
 
       // FB.login requires a plain (non-async) callback.
-      window.FB.login(
+      fbWindow.FB.login(
         (response: any) => {
           const auth = response?.authResponse;
 
