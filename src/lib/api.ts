@@ -192,8 +192,19 @@ export const api = {
   // WhatsApp
   getWhatsAppConnection: () => delay(whatsappConnection),
   getDisconnectedWhatsAppConnection: () => delay(disconnectedWhatsAppConnection),
-  connectWhatsApp: () => {
-    const connected = { ...whatsappConnection, status: 'Connected' as const, connectionDate: new Date().toISOString() };
+ connectWhatsApp: (payload: {
+    accessToken?: string;
+    code?: string;
+    wabaId: string;
+    phoneNumberId: string;
+  }) => {
+    const connected = {
+      ...whatsappConnection,
+      status: 'Connected' as const,
+      businessAccountId: payload.wabaId,
+      phoneNumberId: payload.phoneNumberId,
+      connectionDate: new Date().toISOString(),
+    };
     return delay(connected, 1200);
   },
   disconnectWhatsApp: () => {
