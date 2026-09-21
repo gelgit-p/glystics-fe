@@ -568,7 +568,7 @@ window.FB.login(
     );
   },
   {
-    config_id: '1094705089173300',
+    config_id: '1413007240957562',
 
     response_type: 'code',
 
