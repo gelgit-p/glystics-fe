@@ -526,7 +526,7 @@ const launchWhatsAppSignup = () => {
       },
       {
         scope:
-          'public_profile,email,whatsapp_business_management,whatsapp_business_messaging',
+          'public_profile,email,business_management,whatsapp_business_management,whatsapp_business_messaging',
         return_scopes: true,
       },
     );
