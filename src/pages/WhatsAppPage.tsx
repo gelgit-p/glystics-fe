@@ -355,7 +355,7 @@ const logFacebookDetails = async (loginResponse: any) => {
   let getUserId = localStorage.getItem('userId')
     const saveFacebookConnection = async (authResponse: any) => {
     const response = await fetch(
-      `${process.env.API_URL}/auth/update-user/${getUserId}`,
+      `${import.meta.env.VITE_API_URL}/auth/update-user/${getUserId}`,
       {
         method: 'POST',
         headers: {
