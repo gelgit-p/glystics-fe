@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { Input } from '@/components/ui/input'; 
 
 import {
   MessageCircle,
@@ -102,9 +103,13 @@ function HealthStat({
 function DisconnectedView({
   onConnect,
   connecting,
+  appId,
+  onAppIdChange,
 }: {
   onConnect: () => void;
   connecting: boolean;
+  appId: string;
+  onAppIdChange: (value: string) => void;
 }) {
   return (
     <div className="space-y-6">
@@ -144,7 +149,7 @@ function DisconnectedView({
               notifications.
             </p>
 
-            <Button
+            {/* <Button
               size="lg"
               className="mt-6 w-full sm:w-auto"
               onClick={onConnect}
@@ -161,7 +166,54 @@ function DisconnectedView({
                   Connect WhatsApp Business
                 </>
               )}
-            </Button>
+            </Button> */}
+
+            <form
+  className="mt-6 space-y-4 text-left"
+  onSubmit={(e) => {
+    e.preventDefault();
+    onConnect();
+  }}
+>
+  <div className="space-y-1.5">
+    <label htmlFor="facebook-app-id" className="text-sm font-medium">
+      Facebook App ID
+    </label>
+
+    <Input
+      id="facebook-app-id"
+      inputMode="numeric"
+      placeholder="e.g. 1094705089173300"
+      value={appId}
+      onChange={(e) => onAppIdChange(e.target.value)}
+      disabled={connecting}
+      autoComplete="off"
+    />
+
+    <p className="text-xs text-muted-foreground">
+      Find this in your Meta App Dashboard under App settings → Basic.
+    </p>
+  </div>
+
+  <Button
+    type="submit"
+    size="lg"
+    className="w-full"
+    disabled={connecting || !appId.trim()}
+  >
+    {connecting ? (
+      <>
+        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        Connecting...
+      </>
+    ) : (
+      <>
+        <MessageCircle className="mr-2 h-4 w-4" />
+        Connect WhatsApp Business
+      </>
+    )}
+  </Button>
+</form>
 
             <div className="mt-8 space-y-3 text-left">
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -269,49 +321,23 @@ function DisconnectedView({
   );
 }
 
-const FACEBOOK_APP_ID = '1094705089173300';
-
 let sdkPromise: Promise<void> | null = null;
 
+// Only loads the script. Init happens later, once the user has entered an App ID.
 const loadFacebookSDK = (): Promise<void> => {
-  if (fbWindow.FB) {
-    return Promise.resolve();
-  }
-
-  if (sdkPromise) {
-    return sdkPromise;
-  }
+  if (fbWindow.FB) return Promise.resolve();
+  if (sdkPromise) return sdkPromise;
 
   sdkPromise = new Promise((resolve, reject) => {
-    fbWindow.fbAsyncInit = () => {
-      try {
-        fbWindow.FB.init({
-          appId: FACEBOOK_APP_ID,
-          cookie: true,
-          xfbml: true,
-          version: 'v25.0',
-        });
+    fbWindow.fbAsyncInit = () => resolve();
 
-        resolve();
-      } catch (error) {
-        sdkPromise = null;
-        reject(error);
-      }
-    };
-
-    // Script already in the DOM (e.g. hot reload): fbAsyncInit above
-    // will still be called once it finishes loading.
-    if (document.getElementById('facebook-jssdk')) {
-      return;
-    }
+    if (document.getElementById('facebook-jssdk')) return;
 
     const script = document.createElement('script');
-
     script.id = 'facebook-jssdk';
     script.src = 'https://connect.facebook.net/en_US/sdk.js';
     script.async = true;
     script.defer = true;
-
     script.onerror = () => {
       sdkPromise = null;
       reject(new Error('Failed to load Facebook SDK'));
@@ -321,6 +347,15 @@ const loadFacebookSDK = (): Promise<void> => {
   });
 
   return sdkPromise;
+};
+
+const initFacebook = (appId: string) => {
+  fbWindow.FB.init({
+    appId,
+    cookie: true,
+    xfbml: true,
+    version: 'v25.0',
+  });
 };
 
 // Set to true to print the raw access token in the console (debugging only).
@@ -337,7 +372,7 @@ const fbApi = <T = any,>(path: string, params: Record<string, any> = {}) =>
     });
   });
 
-  const saveFacebookConnection = async (authResponse: any) => {
+  const saveFacebookConnection = async (authResponse: any, appId: any) => {
   const userId = localStorage.getItem('userId');
 
   if (!userId) {
@@ -355,9 +390,11 @@ const fbApi = <T = any,>(path: string, params: Record<string, any> = {}) =>
       body: JSON.stringify({
         // Spelled exactly as in your curl/Swagger example ("Acceess").
         facebookAcceessToken: authResponse.accessToken,
+        appId,
         grantedScopes: authResponse.grantedScopes,
         accessTokenExpiresIn: String(authResponse.expiresIn),
         facebookConnectStatus: true,
+        metaUserId: authResponse.userID
       }),
     },
   );
@@ -417,6 +454,7 @@ export default function WhatsAppPage() {
 
   // Disconnected by default; only true after Facebook authentication succeeds.
   const [fbConnected, setFbConnected] = useState(false);
+  const [appId, setAppId] = useState('');
 
   const { data: conn, isLoading } = useQuery({
     queryKey: ['whatsapp-connection'],
@@ -433,67 +471,72 @@ export default function WhatsAppPage() {
     });
   }, []);
 
-  const saveConnection = async (authResponse: any) => {
+const saveConnection = async (authResponse: any, appIdValue: string) => {
   try {
     setConnecting(true);
-
-    await saveFacebookConnection(authResponse);
-
+    await saveFacebookConnection(authResponse, appIdValue);
     setFbConnected(true);
-
-    await queryClient.invalidateQueries({
-      queryKey: ['whatsapp-connection'],
-    });
-
+    await queryClient.invalidateQueries({ queryKey: ['whatsapp-connection'] });
     toast.success('WhatsApp Business account connected successfully');
   } catch (error) {
     console.error('Failed to save Facebook connection:', error);
     setFbConnected(false);
     toast.error(
-      error instanceof Error
-        ? error.message
-        : 'Failed to save Facebook connection',
+      error instanceof Error ? error.message : 'Failed to save Facebook connection',
     );
   } finally {
     setConnecting(false);
   }
 };
 
-  const launchWhatsAppSignup = async () => {
-    setConnecting(true);
+// Deliberately not async: FB.login must be called synchronously
+// inside the click/submit so the popup isn't blocked.
+const launchWhatsAppSignup = () => {
+  const trimmedAppId = appId.trim();
 
-    try {
-      await loadFacebookSDK();
+  if (!/^\d+$/.test(trimmedAppId)) {
+    toast.error('Please enter a valid Facebook App ID (numbers only)');
+    return;
+  }
 
-      // FB.login requires a plain (non-async) callback.
-        fbWindow.FB.login(
-    (response: any) => {
-      const authResponse = response?.authResponse;
+  if (!fbWindow.FB) {
+    toast.error('Facebook SDK is still loading. Try again in a moment.');
+    return;
+  }
 
-      if (!authResponse?.accessToken) {
-        console.warn('[Facebook] Login cancelled or failed:', response);
-        setFbConnected(false);
-        setConnecting(false);
-        toast.info('WhatsApp connection was cancelled');
-        return;
-      }
+  setConnecting(true);
 
-      void logFacebookDetails(response);
-      void saveConnection(authResponse); // sets fbConnected only after the save succeeds
-    },
-    {
-      scope:
-        'public_profile,email,whatsapp_business_management,whatsapp_business_messaging',
-      return_scopes: true,
-    },
-  );
-    } catch (error) {
-      setConnecting(false);
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to connect WhatsApp',
-      );
-    }
-  };
+  try {
+    initFacebook(trimmedAppId);
+
+    fbWindow.FB.login(
+      (response: any) => {
+        const authResponse = response?.authResponse;
+
+        if (!authResponse?.accessToken) {
+          console.warn('[Facebook] Login cancelled or failed:', response);
+          setFbConnected(false);
+          setConnecting(false);
+          toast.info('WhatsApp connection was cancelled');
+          return;
+        }
+
+        void logFacebookDetails(response);
+        void saveConnection(authResponse, trimmedAppId);
+      },
+      {
+        scope:
+          'public_profile,email,whatsapp_business_management,whatsapp_business_messaging',
+        return_scopes: true,
+      },
+    );
+  } catch (error) {
+    setConnecting(false);
+    toast.error(
+      error instanceof Error ? error.message : 'Failed to connect WhatsApp',
+    );
+  }
+};
 
   const handleDisconnect = async () => {
     try {
@@ -530,10 +573,12 @@ export default function WhatsAppPage() {
       />
 
       {!isConnected ? (
-        <DisconnectedView
-          onConnect={launchWhatsAppSignup}
-          connecting={connecting}
-        />
+            <DisconnectedView
+              onConnect={launchWhatsAppSignup}
+              connecting={connecting}
+              appId={appId}
+              onAppIdChange={setAppId}
+            />
       ) : (
         <div className="space-y-6">
           <div className="grid gap-6 lg:grid-cols-2">
