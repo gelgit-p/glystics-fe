@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useFacebookLogin } from '@kazion/react-facebook-login';
 import { toast } from 'sonner';
 
 import {
@@ -34,6 +33,13 @@ import {
 } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+
+declare global {
+  interface Window {
+    FB: any;
+    fbAsyncInit?: () => void;
+  }
+}
 
 function InfoRow({
   icon: Icon,
@@ -264,6 +270,7 @@ function DisconnectedView({
 }
 
 const FACEBOOK_APP_ID = '1094705089173300';
+const FACEBOOK_CONFIG_ID = '1413007240957562';
 
 let sdkPromise: Promise<void> | null = null;
 
@@ -286,8 +293,6 @@ const loadFacebookSDK = (): Promise<void> => {
           version: 'v25.0',
         });
 
-        console.log('Facebook SDK initialized');
-
         resolve();
       } catch (error) {
         sdkPromise = null;
@@ -295,27 +300,22 @@ const loadFacebookSDK = (): Promise<void> => {
       }
     };
 
-    const existingScript =
-      document.getElementById('facebook-jssdk');
-
-    if (existingScript) {
+    // Script already in the DOM (e.g. hot reload): fbAsyncInit above
+    // will still be called once it finishes loading.
+    if (document.getElementById('facebook-jssdk')) {
       return;
     }
 
     const script = document.createElement('script');
 
     script.id = 'facebook-jssdk';
-    script.src =
-      'https://connect.facebook.net/en_US/sdk.js';
-
+    script.src = 'https://connect.facebook.net/en_US/sdk.js';
     script.async = true;
     script.defer = true;
 
     script.onerror = () => {
       sdkPromise = null;
-      reject(
-        new Error('Failed to load Facebook SDK'),
-      );
+      reject(new Error('Failed to load Facebook SDK'));
     };
 
     document.body.appendChild(script);
@@ -338,7 +338,7 @@ export default function WhatsAppPage() {
   const [disconnecting, setDisconnecting] = useState(false);
 
   // Embedded Signup delivers its data in two separate channels
-  // (the FB login callback and a postMessage event), in no guaranteed order.
+  // (the FB.login callback and a postMessage event), in no guaranteed order.
   // We collect both here and only call the backend once we have everything.
   const pending = useRef<PendingSignup>({});
 
@@ -346,6 +346,16 @@ export default function WhatsAppPage() {
     queryKey: ['whatsapp-connection'],
     queryFn: () => api.getWhatsAppConnection(),
   });
+
+  // Preload the SDK so FB.login can run synchronously inside the click.
+  useEffect(() => {
+    loadFacebookSDK().catch((error) => {
+      console.error('Facebook SDK failed to load:', error);
+      toast.error(
+        'Could not load the Facebook SDK. Disable ad blockers and try again.',
+      );
+    });
+  }, []);
 
   const completeConnection = useCallback(async () => {
     const { token, tokenType, wabaId, phoneNumberId } = pending.current;
@@ -359,6 +369,8 @@ export default function WhatsAppPage() {
     try {
       setConnecting(true);
 
+      // NOTE: with response_type 'code', your backend must exchange the code
+      // for a business token (same app ID + secret) before using it.
       await api.connectWhatsApp({
         ...(tokenType === 'access_token'
           ? { accessToken: token }
@@ -383,36 +395,6 @@ export default function WhatsAppPage() {
       setConnecting(false);
     }
   }, [queryClient]);
-
-  /*
-   * Facebook login via the package.
-   * VERIFY these option names against the package's .d.ts
-   * (node_modules/@kazion/react-facebook-login/dist/*.d.ts).
-   */
-  const login = useFacebookLogin({
-    config_id: '1413007240957562',
-    response_type: 'code',
-    override_default_response_type: true,
-    extras: { version: 'v4' },
-
-    onSuccess: (response: any) => {
-      const auth = response?.authResponse ?? response;
-
-      if (auth?.accessToken) {
-        pending.current.token = auth.accessToken;
-        pending.current.tokenType = 'access_token';
-      } else if (auth?.code) {
-        pending.current.token = auth.code;
-        pending.current.tokenType = 'code';
-      } else {
-        setConnecting(false);
-        toast.error('Facebook did not return an access token.');
-        return;
-      }
-
-      void completeConnection();
-    },
-  } as any);
 
   /*
    * Meta Embedded Signup events (gives us waba_id + phone_number_id).
@@ -441,6 +423,7 @@ export default function WhatsAppPage() {
         const phoneNumberId = data.data?.phone_number_id;
 
         if (!wabaId || !phoneNumberId) {
+          pending.current = {};
           setConnecting(false);
           toast.error(
             'Meta completed signup but did not return the WhatsApp account information.',
@@ -472,12 +455,46 @@ export default function WhatsAppPage() {
     return () => window.removeEventListener('message', handleMessage);
   }, [completeConnection]);
 
-  const launchWhatsAppSignup = () => {
+  const launchWhatsAppSignup = async () => {
     pending.current = {};
     setConnecting(true);
 
     try {
-      login();
+      await loadFacebookSDK();
+
+      // FB.login requires a plain (non-async) callback.
+      window.FB.login(
+        (response: any) => {
+          const auth = response?.authResponse;
+
+          if (auth?.code) {
+            pending.current.token = auth.code;
+            pending.current.tokenType = 'code';
+          } else if (auth?.accessToken) {
+            pending.current.token = auth.accessToken;
+            pending.current.tokenType = 'access_token';
+          } else {
+            // User closed the popup or declined.
+            pending.current = {};
+            setConnecting(false);
+            toast.info('WhatsApp connection was cancelled');
+            return;
+          }
+
+          void completeConnection();
+        },
+        {
+          config_id: FACEBOOK_CONFIG_ID,
+          response_type: 'code',
+          override_default_response_type: true,
+          // No `scope` here: permissions come from the configuration.
+          extras: {
+            setup: {},
+            featureType: '',
+            sessionInfoVersion: '3',
+          },
+        },
+      );
     } catch (error) {
       setConnecting(false);
       toast.error(
@@ -508,8 +525,7 @@ export default function WhatsAppPage() {
     return <LoadingState text="Loading WhatsApp connection..." />;
   }
 
-  const isConnected =
-    conn.status === 'Connected';
+  const isConnected = conn.status === 'Connected';
 
   return (
     <div>
@@ -618,11 +634,7 @@ export default function WhatsAppPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() =>
-                    toast.info(
-                      'Opening WhatsApp Manager...',
-                    )
-                  }
+                  onClick={() => toast.info('Opening WhatsApp Manager...')}
                 >
                   <Settings className="mr-2 h-3.5 w-3.5" />
                   Manage
@@ -638,9 +650,7 @@ export default function WhatsAppPage() {
                   Webhook Status
                 </h3>
 
-                <StatusBadge
-                  status={conn.webhookStatus}
-                />
+                <StatusBadge status={conn.webhookStatus} />
               </div>
 
               <div className="rounded-lg border border-border p-4">
@@ -691,11 +701,7 @@ export default function WhatsAppPage() {
                 variant="outline"
                 size="sm"
                 className="mt-4"
-                onClick={() =>
-                  toast.info(
-                    'Opening webhook settings...',
-                  )
-                }
+                onClick={() => toast.info('Opening webhook settings...')}
               >
                 <Settings className="mr-2 h-3.5 w-3.5" />
                 Configure Webhook
