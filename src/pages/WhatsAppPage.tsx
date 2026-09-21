@@ -323,11 +323,67 @@ const loadFacebookSDK = (): Promise<void> => {
   return sdkPromise;
 };
 
+// Set to true to print the raw access token in the console (debugging only).
+const LOG_FULL_TOKEN = false;
+
+const maskToken = (token?: string) =>
+  !token || LOG_FULL_TOKEN ? token : `${token.slice(0, 8)}...${token.slice(-4)}`;
+
+const fbApi = <T = any,>(path: string, params: Record<string, any> = {}) =>
+  new Promise<T>((resolve, reject) => {
+    fbWindow.FB.api(path, params, (res: any) => {
+      if (!res || res.error) reject(res?.error ?? new Error('Empty response'));
+      else resolve(res);
+    });
+  });
+
+// Logs everything Facebook gives us after a successful login.
+const logFacebookDetails = async (loginResponse: any) => {
+  const auth = loginResponse?.authResponse ?? {};
+
+  console.group('[Facebook] Login success');
+  console.log('Raw login response:', {
+    ...loginResponse,
+    authResponse: { ...auth, accessToken: maskToken(auth.accessToken) },
+  });
+  console.log('Status:', loginResponse?.status);
+  console.log('User ID:', auth.userID);
+  console.log('Granted scopes:', auth.grantedScopes);
+  console.log('Expires in (s):', auth.expiresIn);
+  console.log('Data access expires at:', auth.data_access_expiration_time);
+
+  const calls: Array<[string, string, Record<string, any>]> = [
+    ['Profile (/me)', '/me', { fields: 'id,name,email' }],
+    ['Permissions (/me/permissions)', '/me/permissions', {}],
+    [
+      'Businesses & WhatsApp accounts (/me/businesses)',
+      '/me/businesses',
+      {
+        fields:
+          'id,name,owned_whatsapp_business_accounts{id,name,currency,timezone_id,phone_numbers{id,display_phone_number,verified_name,quality_rating}}',
+      },
+    ],
+  ];
+
+  for (const [label, path, params] of calls) {
+    try {
+      console.log(`${label}:`, await fbApi(path, params));
+    } catch (error) {
+      console.warn(`${label} failed:`, error);
+    }
+  }
+
+  console.groupEnd();
+};
+
 export default function WhatsAppPage() {
   const queryClient = useQueryClient();
 
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
+
+  // Disconnected by default; only true after Facebook authentication succeeds.
+  const [fbConnected, setFbConnected] = useState(false);
 
   const { data: conn, isLoading } = useQuery({
     queryKey: ['whatsapp-connection'],
@@ -382,11 +438,15 @@ export default function WhatsAppPage() {
 
           if (!accessToken) {
             // User closed the popup or declined.
+            console.warn('[Facebook] Login cancelled or failed:', response);
+            setFbConnected(false);
             setConnecting(false);
             toast.info('WhatsApp connection was cancelled');
             return;
           }
 
+          setFbConnected(true);
+          void logFacebookDetails(response);
           void saveConnection(accessToken);
         },
         {
@@ -408,6 +468,7 @@ export default function WhatsAppPage() {
     try {
       setDisconnecting(true);
       await api.disconnectWhatsApp();
+      setFbConnected(false);
       await queryClient.invalidateQueries({
         queryKey: ['whatsapp-connection'],
       });
@@ -426,7 +487,9 @@ export default function WhatsAppPage() {
     return <LoadingState text="Loading WhatsApp connection..." />;
   }
 
-  const isConnected = conn.status === 'Connected';
+  // Driven by Facebook authentication, not by the backend default status.
+  // Once the backend returns real data, use: conn.status === 'Connected'
+  const isConnected = fbConnected;
 
   return (
     <div>

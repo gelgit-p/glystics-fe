@@ -23,21 +23,18 @@ import {
   currentUser,
   organizations,
 } from './mock-data';
-import type {
-  Delivery,
-  Notification,
-  Template,
-  Automation,
-  Contact,
-  ApiKey,
-  Webhook,
-  Invoice,
-  TeamMember,
-} from '@/types';
+import type { Delivery, Template, Automation } from '@/types';
 
 function delay<T>(data: T, ms = 300): Promise<T> {
   return new Promise((resolve) => setTimeout(() => resolve(data), ms));
 }
+
+// In-memory WhatsApp connection state. Starts disconnected and changes only
+// through connectWhatsApp / disconnectWhatsApp below.
+type WhatsAppConnection = typeof whatsappConnection;
+
+let currentWhatsApp =
+  disconnectedWhatsAppConnection as unknown as WhatsAppConnection;
 
 export const api = {
   // Dashboard
@@ -190,25 +187,29 @@ export const api = {
   getContact: (id: string) => delay(mockContacts.find((c) => c.id === id)),
 
   // WhatsApp
-  getWhatsAppConnection: () => delay(whatsappConnection),
+  getWhatsAppConnection: () => delay(currentWhatsApp),
   getDisconnectedWhatsAppConnection: () => delay(disconnectedWhatsAppConnection),
- connectWhatsApp: (payload: {
+
+  connectWhatsApp: (payload: {
     accessToken?: string;
     code?: string;
-    wabaId: string;
-    phoneNumberId: string;
+    wabaId?: string; // optional: classic login doesn't provide these
+    phoneNumberId?: string;
   }) => {
-    const connected = {
+    currentWhatsApp = {
       ...whatsappConnection,
       status: 'Connected' as const,
-      businessAccountId: payload.wabaId,
-      phoneNumberId: payload.phoneNumberId,
+      ...(payload.wabaId ? { businessAccountId: payload.wabaId } : {}),
+      ...(payload.phoneNumberId ? { phoneNumberId: payload.phoneNumberId } : {}),
       connectionDate: new Date().toISOString(),
     };
-    return delay(connected, 1200);
+    return delay(currentWhatsApp, 1200);
   },
+
   disconnectWhatsApp: () => {
-    return delay(disconnectedWhatsAppConnection, 800);
+    currentWhatsApp =
+      disconnectedWhatsAppConnection as unknown as WhatsAppConnection;
+    return delay(currentWhatsApp, 800);
   },
 
   // Analytics
