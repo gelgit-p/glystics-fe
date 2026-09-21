@@ -262,7 +262,7 @@ function DisconnectedView({
   );
 }
 
-const FACEBOOK_APP_ID = '1413007240957562';
+const FACEBOOK_APP_ID = '1094705089173300';
 
 let sdkPromise: Promise<void> | null = null;
 
@@ -568,7 +568,7 @@ window.FB.login(
     );
   },
   {
-    config_id: '1413007240957562',
+    config_id: '1094705089173300',
 
     response_type: 'code',
 
