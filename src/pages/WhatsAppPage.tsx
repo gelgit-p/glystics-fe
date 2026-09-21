@@ -337,6 +337,39 @@ const fbApi = <T = any,>(path: string, params: Record<string, any> = {}) =>
     });
   });
 
+  const saveFacebookConnection = async (authResponse: any) => {
+  const userId = localStorage.getItem('userId');
+
+  if (!userId) {
+    throw new Error('User ID not found. Please log in again.');
+  }
+
+  const response = await fetch(
+    `${import.meta.env.VITE_API_URL}/auth/update-user/${encodeURIComponent(userId)}`,
+    {
+      method: 'POST',
+      headers: {
+        accept: '*/*',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        // Spelled exactly as in your curl/Swagger example ("Acceess").
+        facebookAcceessToken: authResponse.accessToken,
+        grantedScopes: authResponse.grantedScopes,
+        accessTokenExpiresIn: String(authResponse.expiresIn),
+        facebookConnectStatus: true,
+      }),
+    },
+  );
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.message || 'Failed to save Facebook connection');
+  }
+
+  return response.json();
+};
+
 // Logs everything Facebook gives us after a successful login.
 const logFacebookDetails = async (loginResponse: any) => {
   const auth = loginResponse?.authResponse ?? {};
@@ -351,33 +384,6 @@ const logFacebookDetails = async (loginResponse: any) => {
   console.log('Granted scopes:', auth.grantedScopes);
   console.log('Expires in (s):', auth.expiresIn);
   console.log('Data access expires at:', auth.data_access_expiration_time);
-
-  let getUserId = localStorage.getItem('userId')
-    const saveFacebookConnection = async (authResponse: any) => {
-    const response = await fetch(
-      `${import.meta.env.VITE_API_URL}/auth/update-user/${getUserId}`,
-      {
-        method: 'POST',
-        headers: {
-          accept: '*/*',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          facebookAccessToken: authResponse.accessToken,
-          grantedScopes: authResponse.grantedScopes,
-          accessTokenExpiresIn: String(authResponse.expiresIn),
-          facebookConnectStatus: true,
-        }),
-      },
-    );
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.message || 'Failed to save Facebook connection');
-    }
-
-    return response.json();
-  };
 
   const calls: Array<[string, string, Record<string, any>]> = [
     ['Profile (/me)', '/me', { fields: 'id,name,email' }],
@@ -427,30 +433,31 @@ export default function WhatsAppPage() {
     });
   }, []);
 
-  const saveConnection = async (accessToken: string) => {
-    try {
-      setConnecting(true);
+  const saveConnection = async (authResponse: any) => {
+  try {
+    setConnecting(true);
 
-      // The backend should look up the WhatsApp Business Account and phone
-      // number itself using this token (see notes), then store the connection.
-      await api.connectWhatsApp({ accessToken } as any);
+    await saveFacebookConnection(authResponse);
 
-      await queryClient.invalidateQueries({
-        queryKey: ['whatsapp-connection'],
-      });
+    setFbConnected(true);
 
-      toast.success('WhatsApp Business account connected successfully');
-    } catch (error) {
-      console.error('Failed to save WhatsApp connection:', error);
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : 'Failed to save WhatsApp connection',
-      );
-    } finally {
-      setConnecting(false);
-    }
-  };
+    await queryClient.invalidateQueries({
+      queryKey: ['whatsapp-connection'],
+    });
+
+    toast.success('WhatsApp Business account connected successfully');
+  } catch (error) {
+    console.error('Failed to save Facebook connection:', error);
+    setFbConnected(false);
+    toast.error(
+      error instanceof Error
+        ? error.message
+        : 'Failed to save Facebook connection',
+    );
+  } finally {
+    setConnecting(false);
+  }
+};
 
   const launchWhatsAppSignup = async () => {
     setConnecting(true);
@@ -459,30 +466,27 @@ export default function WhatsAppPage() {
       await loadFacebookSDK();
 
       // FB.login requires a plain (non-async) callback.
-      fbWindow.FB.login(
-        (response: any) => {
-          const accessToken = response?.authResponse?.accessToken;
+        fbWindow.FB.login(
+    (response: any) => {
+      const authResponse = response?.authResponse;
 
-          if (!accessToken) {
-            // User closed the popup or declined.
-            console.warn('[Facebook] Login cancelled or failed:', response);
-            setFbConnected(false);
-            setConnecting(false);
-            toast.info('WhatsApp connection was cancelled');
-            return;
-          }
+      if (!authResponse?.accessToken) {
+        console.warn('[Facebook] Login cancelled or failed:', response);
+        setFbConnected(false);
+        setConnecting(false);
+        toast.info('WhatsApp connection was cancelled');
+        return;
+      }
 
-          setFbConnected(true);
-          void logFacebookDetails(response);
-          void saveConnection(accessToken);
-        },
-        {
-          // Same classic login that works in the standalone HTML test.
-          scope:
-            'public_profile,email,whatsapp_business_management,whatsapp_business_messaging',
-          return_scopes: true,
-        },
-      );
+      void logFacebookDetails(response);
+      void saveConnection(authResponse); // sets fbConnected only after the save succeeds
+    },
+    {
+      scope:
+        'public_profile,email,whatsapp_business_management,whatsapp_business_messaging',
+      return_scopes: true,
+    },
+  );
     } catch (error) {
       setConnecting(false);
       toast.error(
