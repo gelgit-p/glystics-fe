@@ -32,6 +32,13 @@ import {
   StatusBadge,
   LoadingState,
 } from '@/components/shared';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -321,6 +328,222 @@ function DisconnectedView({
   );
 }
 
+function BusinessAccountsDialog({
+  open,
+  onOpenChange,
+  businesses,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  businesses: MetaBusiness[];
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[85vh] max-w-5xl overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            WhatsApp Business Accounts
+          </DialogTitle>
+
+          <DialogDescription>
+            Select or review the WhatsApp Business accounts
+            available under your Meta businesses.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-6">
+          {businesses.length === 0 ? (
+            <div className="rounded-lg border border-border p-6 text-center">
+              <Building2 className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
+
+              <p className="font-medium">
+                No businesses found
+              </p>
+
+              <p className="mt-1 text-sm text-muted-foreground">
+                No Meta businesses were returned for this account.
+              </p>
+            </div>
+          ) : (
+            businesses.map((business) => {
+              const accounts =
+                business.owned_whatsapp_business_accounts?.data ?? [];
+
+              return (
+                <div
+                  key={business.id}
+                  className="overflow-hidden rounded-xl border border-border"
+                >
+                  {/* Business header */}
+                  <div className="border-b border-border bg-muted/40 p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                        <Building2 className="h-5 w-5 text-primary" />
+                      </div>
+
+                      <div className="min-w-0">
+                        <h3 className="font-semibold">
+                          {business.name}
+                        </h3>
+
+                        <p className="mt-1 font-mono text-xs text-muted-foreground">
+                          Business ID: {business.id}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* WABA accounts */}
+                  <div className="p-4">
+                    <div className="mb-3 flex items-center justify-between">
+                      <h4 className="text-sm font-semibold">
+                        WhatsApp Business Accounts
+                      </h4>
+
+                      <span className="rounded-full bg-muted px-2.5 py-1 text-xs">
+                        {accounts.length} account
+                        {accounts.length !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+
+                    {accounts.length === 0 ? (
+                      <div className="rounded-lg border border-dashed border-border p-5 text-center">
+                        <p className="text-sm text-muted-foreground">
+                          No WhatsApp Business Accounts found.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {accounts.map((account) => {
+                          const phones =
+                            account.phone_numbers?.data ?? [];
+
+                          return (
+                            <div
+                              key={account.id}
+                              className="rounded-lg border border-border"
+                            >
+                              {/* WABA info */}
+                              <div className="border-b border-border p-4">
+                                <div className="grid gap-4 sm:grid-cols-3">
+                                  <div>
+                                    <p className="text-xs text-muted-foreground">
+                                      WABA Name
+                                    </p>
+
+                                    <p className="mt-1 text-sm font-medium">
+                                      {account.name}
+                                    </p>
+                                  </div>
+
+                                  <div>
+                                    <p className="text-xs text-muted-foreground">
+                                      WABA ID
+                                    </p>
+
+                                    <p className="mt-1 break-all font-mono text-xs">
+                                      {account.id}
+                                    </p>
+                                  </div>
+
+                                  <div>
+                                    <p className="text-xs text-muted-foreground">
+                                      Currency
+                                    </p>
+
+                                    <p className="mt-1 text-sm font-medium">
+                                      {account.currency ?? '—'}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Phone numbers */}
+                              <div className="p-4">
+                                <div className="mb-3 flex items-center gap-2">
+                                  <Phone className="h-4 w-4 text-muted-foreground" />
+
+                                  <h5 className="text-sm font-semibold">
+                                    Phone Numbers
+                                  </h5>
+                                </div>
+
+                                {phones.length === 0 ? (
+                                  <p className="text-sm text-muted-foreground">
+                                    No phone numbers found.
+                                  </p>
+                                ) : (
+                                  <div className="overflow-x-auto rounded-lg border border-border">
+                                    <table className="w-full text-sm">
+                                      <thead className="bg-muted/40">
+                                        <tr className="border-b border-border">
+                                          <th className="px-4 py-3 text-left font-medium">
+                                            ID
+                                          </th>
+
+                                          <th className="px-4 py-3 text-left font-medium">
+                                            Display Phone Number
+                                          </th>
+
+                                          <th className="px-4 py-3 text-left font-medium">
+                                            Verified Name
+                                          </th>
+
+                                          <th className="px-4 py-3 text-left font-medium">
+                                            Quality
+                                          </th>
+                                        </tr>
+                                      </thead>
+
+                                      <tbody>
+                                        {phones.map((phone) => (
+                                          <tr
+                                            key={phone.id}
+                                            className="border-b border-border last:border-0"
+                                          >
+                                            <td className="px-4 py-3">
+                                              <span className="font-mono text-xs">
+                                                {phone.id}
+                                              </span>
+                                            </td>
+
+                                            <td className="px-4 py-3 whitespace-nowrap">
+                                              {phone.display_phone_number ??
+                                                '—'}
+                                            </td>
+
+                                            <td className="px-4 py-3">
+                                              {phone.verified_name ?? '—'}
+                                            </td>
+
+                                            <td className="px-4 py-3">
+                                              <span className="rounded-full bg-muted px-2 py-1 text-xs">
+                                                {phone.quality_rating ?? '—'}
+                                              </span>
+                                            </td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 let sdkPromise: Promise<void> | null = null;
 
 // Only loads the script. Init happens later, once the user has entered an App ID.
@@ -408,49 +631,113 @@ const fbApi = <T = any,>(path: string, params: Record<string, any> = {}) =>
 };
 
 // Logs everything Facebook gives us after a successful login.
-const logFacebookDetails = async (loginResponse: any) => {
+  // Preload the SDK so log can run synchronously inside the click.
+
+
+type WhatsAppPhoneNumber = {
+  id: string;
+  display_phone_number?: string;
+  verified_name?: string;
+  quality_rating?: string;
+};
+
+type WhatsAppBusinessAccount = {
+  id: string;
+  name: string;
+  currency?: string;
+  timezone_id?: string;
+  phone_numbers?: {
+    data: WhatsAppPhoneNumber[];
+  };
+};
+
+type MetaBusiness = {
+  id: string;
+  name: string;
+  owned_whatsapp_business_accounts?: {
+    data: WhatsAppBusinessAccount[];
+  };
+};
+
+export default function WhatsAppPage() {
+
+  const logFacebookDetails = async (loginResponse: any) => {
   const auth = loginResponse?.authResponse ?? {};
 
   console.group('[Facebook] Login success');
+
   console.log('Raw login response:', {
     ...loginResponse,
-    authResponse: { ...auth, accessToken: maskToken(auth.accessToken) },
+    authResponse: {
+      ...auth,
+      accessToken: maskToken(auth.accessToken),
+    },
   });
+
   console.log('Status:', loginResponse?.status);
   console.log('User ID:', auth.userID);
   console.log('Granted scopes:', auth.grantedScopes);
   console.log('Expires in (s):', auth.expiresIn);
-  console.log('Data access expires at:', auth.data_access_expiration_time);
+  console.log(
+    'Data access expires at:',
+    auth.data_access_expiration_time,
+  );
 
-  const calls: Array<[string, string, Record<string, any>]> = [
-    ['Profile (/me)', '/me', { fields: 'id,name,email' }],
-    ['Permissions (/me/permissions)', '/me/permissions', {}],
-    [
-      'Businesses & WhatsApp accounts (/me/businesses)',
-      '/me/businesses',
-      {
-        fields:
-          'id,name,owned_whatsapp_business_accounts{id,name,currency,timezone_id,phone_numbers{id,display_phone_number,verified_name,quality_rating}}',
-      },
-    ],
-  ];
+  try {
+    const profile = await fbApi('/me', {
+      fields: 'id,name,email',
+    });
 
-  for (const [label, path, params] of calls) {
-    try {
-      console.log(`${label}:`, await fbApi(path, params));
-    } catch (error) {
-      console.warn(`${label} failed:`, error);
-    }
+    console.log('Profile (/me):', profile);
+  } catch (error) {
+    console.warn('Profile failed:', error);
+  }
+
+  try {
+    const permissions = await fbApi('/me/permissions');
+
+    console.log(
+      'Permissions (/me/permissions):',
+      permissions,
+    );
+  } catch (error) {
+    console.warn(
+      'Permissions failed:',
+      error,
+    );
+  }
+
+  try {
+    const businessResponse = await fbApi<{
+      data: MetaBusiness[];
+    }>('/me/businesses', {
+      fields:
+        'id,name,owned_whatsapp_business_accounts{id,name,currency,timezone_id,phone_numbers{id,display_phone_number,verified_name,quality_rating}}',
+    });
+
+    console.log(
+      'Businesses & WhatsApp accounts:',
+      businessResponse,
+    );
+
+    setBusinesses(businessResponse.data ?? []);
+    setShowBusinessPopup(true);
+  } catch (error) {
+    console.warn(
+      'Businesses & WhatsApp accounts failed:',
+      error,
+    );
   }
 
   console.groupEnd();
 };
 
-export default function WhatsAppPage() {
   const queryClient = useQueryClient();
 
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
+  const [businesses, setBusinesses] = useState<MetaBusiness[]>([]);
+const [showBusinessPopup, setShowBusinessPopup] = useState(false);
 
   // Disconnected by default; only true after Facebook authentication succeeds.
   const [fbConnected, setFbConnected] = useState(false);
@@ -461,7 +748,6 @@ export default function WhatsAppPage() {
     queryFn: () => api.getWhatsAppConnection(),
   });
 
-  // Preload the SDK so FB.login can run synchronously inside the click.
   useEffect(() => {
     loadFacebookSDK().catch((error) => {
       console.error('Facebook SDK failed to load:', error);
@@ -506,6 +792,54 @@ const launchWhatsAppSignup = () => {
 
   setConnecting(true);
 
+  const handleFacebookLoginSuccess = async (
+  response: any,
+  appIdValue: string,
+) => {
+  const authResponse = response?.authResponse;
+
+  if (!authResponse?.accessToken) {
+    setConnecting(false);
+    toast.info('WhatsApp connection was cancelled');
+    return;
+  }
+
+  try {
+    const businessResponse = await fbApi<{
+      data: MetaBusiness[];
+    }>('/me/businesses', {
+      fields:
+        'id,name,owned_whatsapp_business_accounts{id,name,currency,timezone_id,phone_numbers{id,display_phone_number,verified_name,quality_rating}}',
+    });
+
+    setBusinesses(businessResponse.data ?? []);
+
+    // Stop the loading state so the user can interact
+    // with the popup.
+    setConnecting(false);
+
+    // Show businesses BEFORE switching to connected UI.
+    setShowBusinessPopup(true);
+
+    // Keep auth data available for the next step.
+    // You can store this in state if the user must select
+    // a specific WABA before saving.
+  } catch (error) {
+    console.error(
+      'Failed to fetch Meta businesses:',
+      error,
+    );
+
+    setConnecting(false);
+
+    toast.error(
+      error instanceof Error
+        ? error.message
+        : 'Failed to fetch your Meta businesses',
+    );
+  }
+};
+
   try {
     initFacebook(trimmedAppId);
 
@@ -521,8 +855,13 @@ const launchWhatsAppSignup = () => {
           return;
         }
 
-        void logFacebookDetails(response);
-        void saveConnection(authResponse, trimmedAppId);
+        // void logFacebookDetails(response);
+        // void saveConnection(authResponse, trimmedAppId);
+
+        void handleFacebookLoginSuccess(
+  response,
+  trimmedAppId,
+);
       },
       {
         scope:
@@ -567,6 +906,11 @@ const launchWhatsAppSignup = () => {
 
   return (
     <div>
+          <BusinessAccountsDialog
+      open={showBusinessPopup}
+      onOpenChange={setShowBusinessPopup}
+      businesses={businesses}
+    />
       <PageHeader
         title="WhatsApp"
         description="Manage your WhatsApp Business connection and message health."
