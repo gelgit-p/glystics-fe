@@ -262,7 +262,7 @@ function DisconnectedView({
   );
 }
 
-const FACEBOOK_APP_ID = '1094705089173300';
+const FACEBOOK_APP_ID = '1413007240957562';
 
 let sdkPromise: Promise<void> | null = null;
 
