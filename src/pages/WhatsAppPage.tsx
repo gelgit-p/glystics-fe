@@ -1057,7 +1057,7 @@ const launchWhatsAppSignup = () => {
     }
   };
 
-  if (isLoading || isUserLoading || !userDetails) {
+  if (isLoading || isUserLoading || !userDetails || !conn) {
   return (
     <LoadingState text="Loading WhatsApp connection..." />
   );
