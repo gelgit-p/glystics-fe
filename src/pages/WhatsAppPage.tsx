@@ -802,6 +802,88 @@ const saveConnection = async (authResponse: any, appIdValue: string) => {
   }
 };
 
+
+const saveWhatsAppSelection = async (
+  waba: WhatsAppBusinessAccount,
+  business: MetaBusiness,
+) => {
+  try {
+    const userId = localStorage.getItem('userId');
+
+    if (!userId) {
+      throw new Error('User ID not found. Please log in again.');
+    }
+
+    const phones = waba.phone_numbers?.data ?? [];
+
+    if (!waba.id) {
+      throw new Error('WhatsApp Business Account ID is missing.');
+    }
+
+    const selectedPhoneNumberId = phones
+      .map((phone) => phone.id)
+      .filter(Boolean);
+
+    const selectedPhone = phones[0];
+
+    const response = await fetch(
+      `${import.meta.env.VITE_API_URL}/auth/update-user/${encodeURIComponent(
+        userId,
+      )}`,
+      {
+        method: 'POST',
+        headers: {
+          accept: '*/*',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          selectedWabaId: waba.id,
+          selectedFacebookBusinessId: business.id,
+          selectedFacebookBusinessName: business.name,
+          selectedPhoneNumberQualityRating:
+            selectedPhone?.quality_rating ?? '',
+          selectedPhoneNumberVerifiedName:
+            selectedPhone?.verified_name ?? '',
+          selectedPhoneNumberId,
+        }),
+      },
+    );
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+
+      throw new Error(
+        error.message || 'Failed to save WhatsApp Business selection',
+      );
+    }
+
+    const result = await response.json();
+
+    // Keep the selected values in local state as well.
+    setSelectedWaba(waba);
+    setSelectedBusiness(business);
+    setShowBusinessPopup(false);
+    setFbConnected(true);
+
+    await queryClient.invalidateQueries({
+      queryKey: ['whatsapp-connection'],
+    });
+
+    toast.success('WhatsApp Business account selected successfully');
+
+    return result;
+  } catch (error) {
+    console.error('Failed to save WhatsApp Business selection:', error);
+
+    toast.error(
+      error instanceof Error
+        ? error.message
+        : 'Failed to save WhatsApp Business selection',
+    );
+  }
+};
+
+
 // Deliberately not async: FB.login must be called synchronously
 // inside the click/submit so the popup isn't blocked.
 const launchWhatsAppSignup = () => {
@@ -933,17 +1015,18 @@ const launchWhatsAppSignup = () => {
 
   return (
     <div>
-      <BusinessAccountsDialog
-        open={showBusinessPopup}
-        onOpenChange={setShowBusinessPopup}
-        businesses={businesses}
-        onSelectWaba={(waba, business) => {
-          console.log('Selected WABA:', waba);
-          console.log('Selected Business:', business);
+    <BusinessAccountsDialog
+      open={showBusinessPopup}
+      onOpenChange={setShowBusinessPopup}
+      businesses={businesses}
+      onSelectWaba={(waba, business) => {
+        console.log('Selected WABA:', waba);
+        console.log('Selected Business:', business);
 
-          setShowBusinessPopup(false);
-        }}
-      />
+        void saveWhatsAppSelection(waba, business);
+      }}
+    />
+
       <PageHeader
         title="WhatsApp"
         description="Manage your WhatsApp Business connection and message health."
