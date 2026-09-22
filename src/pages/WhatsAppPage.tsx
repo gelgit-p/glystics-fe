@@ -328,15 +328,19 @@ function DisconnectedView({
   );
 }
 
+interface WabaDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  businesses: any[];
+  onSelectWaba: (waba: any, business: any) => void;
+}
+
 function BusinessAccountsDialog({
   open,
   onOpenChange,
   businesses,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  businesses: MetaBusiness[];
-}) {
+  onSelectWaba,
+}: WabaDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85vh] max-w-5xl overflow-y-auto">
@@ -414,7 +418,7 @@ function BusinessAccountsDialog({
                       </div>
                     ) : (
                       <div className="space-y-4">
-                        {accounts.map((account) => {
+                        {accounts.map((account: any) => {
                           const phones =
                             account.phone_numbers?.data ?? [];
 
@@ -424,39 +428,51 @@ function BusinessAccountsDialog({
                               className="rounded-lg border border-border"
                             >
                               {/* WABA info */}
-                              <div className="border-b border-border p-4">
-                                <div className="grid gap-4 sm:grid-cols-3">
-                                  <div>
-                                    <p className="text-xs text-muted-foreground">
-                                      WABA Name
-                                    </p>
+                              {/* WABA info */}
+<div className="border-b border-border p-4">
+  <div className="flex items-start justify-between gap-4">
+    <div className="grid flex-1 gap-4 sm:grid-cols-3">
+      <div>
+        <p className="text-xs text-muted-foreground">
+          WABA Name
+        </p>
 
-                                    <p className="mt-1 text-sm font-medium">
-                                      {account.name}
-                                    </p>
-                                  </div>
+        <p className="mt-1 text-sm font-medium">
+          {account.name}
+        </p>
+      </div>
 
-                                  <div>
-                                    <p className="text-xs text-muted-foreground">
-                                      WABA ID
-                                    </p>
+      <div>
+        <p className="text-xs text-muted-foreground">
+          WABA ID
+        </p>
 
-                                    <p className="mt-1 break-all font-mono text-xs">
-                                      {account.id}
-                                    </p>
-                                  </div>
+        <p className="mt-1 break-all font-mono text-xs">
+          {account.id}
+        </p>
+      </div>
 
-                                  <div>
-                                    <p className="text-xs text-muted-foreground">
-                                      Currency
-                                    </p>
+      <div>
+        <p className="text-xs text-muted-foreground">
+          Currency
+        </p>
 
-                                    <p className="mt-1 text-sm font-medium">
-                                      {account.currency ?? '—'}
-                                    </p>
-                                  </div>
-                                </div>
-                              </div>
+        <p className="mt-1 text-sm font-medium">
+          {account.currency ?? '—'}
+        </p>
+      </div>
+    </div>
+
+    <Button
+      type="button"
+      size="sm"
+      onClick={() => onSelectWaba(account, business)}
+      className="shrink-0"
+    >
+      Select
+    </Button>
+  </div>
+</div>
 
                               {/* Phone numbers */}
                               <div className="p-4">
@@ -496,7 +512,7 @@ function BusinessAccountsDialog({
                                       </thead>
 
                                       <tbody>
-                                        {phones.map((phone) => (
+                                        {phones.map((phone: any) => (
                                           <tr
                                             key={phone.id}
                                             className="border-b border-border last:border-0"
@@ -738,6 +754,17 @@ export default function WhatsAppPage() {
   const [disconnecting, setDisconnecting] = useState(false);
   const [businesses, setBusinesses] = useState<MetaBusiness[]>([]);
 const [showBusinessPopup, setShowBusinessPopup] = useState(false);
+const [selectedWaba, setSelectedWaba] =
+  useState<WhatsAppBusinessAccount | null>(null);
+
+const [selectedBusiness, setSelectedBusiness] =
+  useState<MetaBusiness | null>(null);
+
+  console.log(selectedWaba?.id, 'selectedWabaId')
+console.log(selectedWaba?.name, 'selectedWabaname')
+console.log(selectedWaba?.phone_numbers?.data, 'selected_wabab_phone_number_data')
+console.log(selectedBusiness?.id, 'selected_business_id')
+console.log(selectedBusiness?.name, 'selected_business_name')
 
   // Disconnected by default; only true after Facebook authentication succeeds.
   const [fbConnected, setFbConnected] = useState(false);
@@ -906,11 +933,17 @@ const launchWhatsAppSignup = () => {
 
   return (
     <div>
-          <BusinessAccountsDialog
-      open={showBusinessPopup}
-      onOpenChange={setShowBusinessPopup}
-      businesses={businesses}
-    />
+      <BusinessAccountsDialog
+        open={showBusinessPopup}
+        onOpenChange={setShowBusinessPopup}
+        businesses={businesses}
+        onSelectWaba={(waba, business) => {
+          console.log('Selected WABA:', waba);
+          console.log('Selected Business:', business);
+
+          setShowBusinessPopup(false);
+        }}
+      />
       <PageHeader
         title="WhatsApp"
         description="Manage your WhatsApp Business connection and message health."
