@@ -765,6 +765,7 @@ export default function WhatsAppPage() {
   const [disconnecting, setDisconnecting] = useState(false);
   const [businesses, setBusinesses] = useState<MetaBusiness[]>([]);
 const [showBusinessPopup, setShowBusinessPopup] = useState(false);
+const [loadingBusinesses, setLoadingBusinesses] = useState(false);
 const [selectedWaba, setSelectedWaba] =
   useState<WhatsAppBusinessAccount | null>(null);
 
@@ -1038,6 +1039,46 @@ const launchWhatsAppSignup = () => {
   }
 };
 
+const handleManageBusinesses = async () => {
+  if (!fbWindow.FB) {
+    toast.error('Facebook SDK is still loading. Try again in a moment.');
+    return;
+  }
+
+  try {
+    setLoadingBusinesses(true);
+
+    const businessResponse = await fbApi<{
+      data: MetaBusiness[];
+    }>('/me/businesses', {
+      fields:
+        'id,name,owned_whatsapp_business_accounts{id,name,currency,timezone_id,phone_numbers{id,display_phone_number,verified_name,quality_rating}}',
+    });
+
+    const fetchedBusinesses = businessResponse.data ?? [];
+
+    if (fetchedBusinesses.length === 0) {
+      toast.info('No Meta businesses found for this account.');
+      return;
+    }
+
+    setBusinesses(fetchedBusinesses);
+    setShowBusinessPopup(true);
+  } catch (error) {
+    console.error('Failed to fetch Meta businesses:', error);
+
+    // Most likely cause: the FB JS SDK session/cookie has expired,
+    // since FB.init() only runs during the original connect flow.
+    toast.error(
+      error instanceof Error
+        ? error.message
+        : 'Failed to fetch your Meta businesses. Try reconnecting instead.',
+    );
+  } finally {
+    setLoadingBusinesses(false);
+  }
+};
+
 const handleDisconnect = async () => {
   try {
     setDisconnecting(true);
@@ -1288,15 +1329,23 @@ const handleDisconnect = async () => {
     <Button
       variant="outline"
       size="sm"
-      onClick={() =>
-        toast.info('Opening WhatsApp Manager...')
-      }
+      onClick={handleManageBusinesses}
+      disabled={loadingBusinesses}
     >
-      <Settings className="mr-2 h-3.5 w-3.5" />
-      Manage
+      {loadingBusinesses ? (
+        <>
+          <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+          Loading...
+        </>
+      ) : (
+        <>
+          <Settings className="mr-2 h-3.5 w-3.5" />
+          Manage
+        </>
+      )}
     </Button>
-  </div>
-</div>
+      </div>
+    </div>
 
             {/* Webhook status */}
             <div className="rounded-xl border border-border bg-card p-6">
