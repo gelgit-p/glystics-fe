@@ -846,7 +846,8 @@ const saveWhatsAppSelection = async (
           selectedPhoneNumberVerifiedName:
             selectedPhone?.verified_name ?? '',
           selectedPhoneNumberId,
-          displayPhoneNumber: waba.phone_numbers?.data[0].display_phone_number
+          displayPhoneNumber: waba.phone_numbers?.data[0].display_phone_number,
+          facebookConnectStatus: true
         }),
       },
     );
