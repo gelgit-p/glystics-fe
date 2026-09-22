@@ -1038,24 +1038,43 @@ const launchWhatsAppSignup = () => {
   }
 };
 
-  const handleDisconnect = async () => {
-    try {
-      setDisconnecting(true);
-      await api.disconnectWhatsApp();
-      setFbConnected(false);
-      await queryClient.invalidateQueries({
+const handleDisconnect = async () => {
+  try {
+    setDisconnecting(true);
+
+    await api.disconnectWhatsApp();
+
+    const userId = localStorage.getItem('userId');
+
+    setFbConnected(false);
+
+    // Refresh both the WhatsApp connection and user details
+    await Promise.all([
+      queryClient.invalidateQueries({
         queryKey: ['whatsapp-connection'],
-      });
-      toast.success('WhatsApp Business disconnected');
-    } catch (error) {
-      console.error('Failed to disconnect WhatsApp:', error);
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to disconnect WhatsApp',
-      );
-    } finally {
-      setDisconnecting(false);
-    }
-  };
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ['user-details', userId],
+      }),
+    ]);
+
+    // Explicitly refetch user details so the UI immediately reflects
+    // the disconnected state.
+    await refetchUserDetails();
+
+    toast.success('WhatsApp Business disconnected');
+  } catch (error) {
+    console.error('Failed to disconnect WhatsApp:', error);
+
+    toast.error(
+      error instanceof Error
+        ? error.message
+        : 'Failed to disconnect WhatsApp',
+    );
+  } finally {
+    setDisconnecting(false);
+  }
+};
 
   if (isLoading || isUserLoading || !userDetails || !conn) {
   return (
@@ -1065,12 +1084,7 @@ const launchWhatsAppSignup = () => {
 
   // Driven by Facebook authentication, not by the backend default status.
   // Once the backend returns real data, use: conn.status === 'Connected'
-  const isConnected =
-  userDetails?.facebookConnectStatus === true ||
-  Boolean(
-    userDetails?.selectedWabaId &&
-      userDetails?.selectedPhoneNumberId?.length,
-  );
+const isConnected = userDetails?.facebookConnectStatus === true;
 
   const connectionData = {
   businessName:
