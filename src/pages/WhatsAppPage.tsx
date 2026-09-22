@@ -1042,13 +1042,66 @@ const handleDisconnect = async () => {
   try {
     setDisconnecting(true);
 
-    await api.disconnectWhatsApp();
-
     const userId = localStorage.getItem('userId');
 
+    if (!userId) {
+      throw new Error('User ID not found. Please log in again.');
+    }
+
+    // Update the real backend connection status
+    const response = await fetch(
+      `${import.meta.env.VITE_API_URL}/auth/update-user/${encodeURIComponent(
+        userId,
+      )}`,
+      {
+        method: 'POST',
+        headers: {
+          accept: '*/*',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          facebookConnectStatus: false,
+        }),
+      },
+    );
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+
+      throw new Error(
+        error.message || 'Failed to disconnect WhatsApp Business',
+      );
+    }
+
+    // Immediately update React Query cache
+    queryClient.setQueryData(
+      ['user-details', userId],
+      (old: any) =>
+        old
+          ? {
+              ...old,
+              facebookConnectStatus: false,
+            }
+          : old,
+    );
+
+    // Also update the local connection cache
+    queryClient.setQueryData(
+      ['whatsapp-connection'],
+      (old: WhatsAppConnection | undefined) => {
+        if (!old) return old;
+
+        return {
+          ...old,
+          webhookStatus: 'Disconnected',
+        };
+      },
+    );
+
+    // Keep local state in sync
     setFbConnected(false);
 
-    // Refresh both the WhatsApp connection and user details
+    // Refresh backend data
     await Promise.all([
       queryClient.invalidateQueries({
         queryKey: ['whatsapp-connection'],
@@ -1057,10 +1110,6 @@ const handleDisconnect = async () => {
         queryKey: ['user-details', userId],
       }),
     ]);
-
-    // Explicitly refetch user details so the UI immediately reflects
-    // the disconnected state.
-    await refetchUserDetails();
 
     toast.success('WhatsApp Business disconnected');
   } catch (error) {
@@ -1084,7 +1133,7 @@ const handleDisconnect = async () => {
 
   // Driven by Facebook authentication, not by the backend default status.
   // Once the backend returns real data, use: conn.status === 'Connected'
-const isConnected = userDetails?.facebookConnectStatus === true;
+  const isConnected = userDetails?.facebookConnectStatus === true;
 
   const connectionData = {
   businessName:
