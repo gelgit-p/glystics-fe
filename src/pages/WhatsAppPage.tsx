@@ -675,6 +675,17 @@ type MetaBusiness = {
   };
 };
 
+type WhatsAppConnection = {
+  webhookStatus: string;
+  lastEvent: string;
+  messageHealth: {
+    sent: number;
+    delivered: number;
+    read: number;
+    failed: number;
+  };
+};
+
 export default function WhatsAppPage() {
 
   const logFacebookDetails = async (loginResponse: any) => {
@@ -770,7 +781,10 @@ console.log(selectedBusiness?.name, 'selected_business_name')
   const [fbConnected, setFbConnected] = useState(false);
   const [appId, setAppId] = useState('');
 
-  const { data: conn, isLoading } = useQuery({
+  const {
+    data: conn,
+    isLoading,
+  } = useQuery<WhatsAppConnection>({
     queryKey: ['whatsapp-connection'],
     queryFn: () => api.getWhatsAppConnection(),
   });
@@ -868,9 +882,14 @@ const saveWhatsAppSelection = async (
     setShowBusinessPopup(false);
     setFbConnected(true);
 
-    await queryClient.invalidateQueries({
-      queryKey: ['whatsapp-connection'],
-    });
+    await Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: ['whatsapp-connection'],
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ['user-details', userId],
+      }),
+    ]);
 
     toast.success('WhatsApp Business account selected successfully');
 
@@ -885,6 +904,39 @@ const saveWhatsAppSelection = async (
     );
   }
 };
+
+const userId = localStorage.getItem('userId');
+
+const {
+  data: userDetails,
+  isLoading: isUserLoading,
+  refetch: refetchUserDetails,
+} = useQuery({
+  queryKey: ['user-details', userId],
+  queryFn: async () => {
+    if (!userId) {
+      throw new Error('User ID not found');
+    }
+
+    const response = await fetch(
+      `${import.meta.env.VITE_API_URL}/auth/${encodeURIComponent(userId)}`,
+      {
+        method: 'GET',
+        headers: {
+          accept: '*/*',
+        },
+      },
+    );
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.message || 'Failed to fetch user details');
+    }
+
+    return response.json();
+  },
+  enabled: !!userId,
+});
 
 
 // Deliberately not async: FB.login must be called synchronously
@@ -967,9 +1019,6 @@ const launchWhatsAppSignup = () => {
           return;
         }
 
-        // void logFacebookDetails(response);
-        // void saveConnection(authResponse, trimmedAppId);
-
         void handleFacebookLoginSuccess(
   response,
   trimmedAppId,
@@ -1008,13 +1057,44 @@ const launchWhatsAppSignup = () => {
     }
   };
 
-  if (isLoading || !conn) {
-    return <LoadingState text="Loading WhatsApp connection..." />;
-  }
+  if (isLoading || isUserLoading || !userDetails) {
+  return (
+    <LoadingState text="Loading WhatsApp connection..." />
+  );
+}
 
   // Driven by Facebook authentication, not by the backend default status.
   // Once the backend returns real data, use: conn.status === 'Connected'
-  const isConnected = fbConnected;
+  const isConnected =
+  userDetails?.facebookConnectStatus === true ||
+  Boolean(
+    userDetails?.selectedWabaId &&
+      userDetails?.selectedPhoneNumberId?.length,
+  );
+
+  const connectionData = {
+  businessName:
+    userDetails?.selectedFacebookBusinessName ||
+    userDetails?.businessName ||
+    '—',
+
+  phoneNumber:
+    userDetails?.displayPhoneNumber ||
+    '—',
+
+  businessAccountId:
+    userDetails?.selectedWabaId ||
+    '—',
+
+  phoneNumberId:
+    Array.isArray(userDetails?.selectedPhoneNumberId)
+      ? userDetails.selectedPhoneNumberId[0] || '—'
+      : userDetails?.selectedPhoneNumberId || '—',
+
+  connectionDate: userDetails?.createdAt
+    ? new Date(userDetails.createdAt)
+    : null,
+};
 
   return (
     <div>
@@ -1047,103 +1127,113 @@ const launchWhatsAppSignup = () => {
           <div className="grid gap-6 lg:grid-cols-2">
             {/* Connection status */}
             <div className="rounded-xl border border-border bg-card p-6">
-              <div className="mb-4 flex items-center justify-between">
-                <h3 className="flex items-center gap-2 text-base font-semibold">
-                  <MessageCircle className="h-5 w-5 text-primary" />
-                  Connection Status
-                </h3>
+  <div className="mb-4 flex items-center justify-between">
+    <h3 className="flex items-center gap-2 text-base font-semibold">
+      <MessageCircle className="h-5 w-5 text-emerald-600" />
+      Connection Status
+    </h3>
 
-                <StatusBadge status={conn.status} />
-              </div>
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
+      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+      Connected
+    </span>
+  </div>
 
-              <div className="divide-y divide-border border-y border-border">
-                <InfoRow
-                  icon={Building2}
-                  label="Business name"
-                  value={conn.businessName}
-                />
+  <div className="divide-y divide-border border-y border-border">
+    <InfoRow
+      icon={Building2}
+      label="Business name"
+      value={connectionData.businessName}
+    />
 
-                <InfoRow
-                  icon={Phone}
-                  label="Phone number"
-                  value={conn.phoneNumber}
-                />
+    <InfoRow
+      icon={Phone}
+      label="Phone number"
+      value={connectionData.phoneNumber}
+    />
 
-                <InfoRow
-                  icon={Hash}
-                  label="Business Account ID"
-                  value={conn.businessAccountId}
-                />
+    <InfoRow
+      icon={Hash}
+      label="Business Account ID"
+      value={connectionData.businessAccountId}
+    />
 
-                <InfoRow
-                  icon={Hash}
-                  label="Phone Number ID"
-                  value={conn.phoneNumberId}
-                />
+    <InfoRow
+      icon={Hash}
+      label="Phone Number ID"
+      value={connectionData.phoneNumberId}
+    />
 
-                <InfoRow
-                  icon={Calendar}
-                  label="Connection date"
-                  value={new Date(
-                    conn.connectionDate,
-                  ).toLocaleDateString('en-NG', {
-                    month: 'long',
-                    day: 'numeric',
-                    year: 'numeric',
-                  })}
-                />
-              </div>
+    <InfoRow
+      icon={Calendar}
+      label="Connection date"
+      value={
+        connectionData.connectionDate
+          ? connectionData.connectionDate.toLocaleDateString(
+              'en-NG',
+              {
+                month: 'long',
+                day: 'numeric',
+                year: 'numeric',
+              },
+            )
+          : '—'
+      }
+    />
+  </div>
 
-              <div className="mt-4 flex flex-wrap gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={launchWhatsAppSignup}
-                  disabled={connecting}
-                >
-                  {connecting ? (
-                    <>
-                      <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
-                      Reconnecting...
-                    </>
-                  ) : (
-                    <>
-                      <RefreshCw className="mr-2 h-3.5 w-3.5" />
-                      Reconnect
-                    </>
-                  )}
-                </Button>
+  <div className="mt-4 flex flex-wrap gap-2">
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={launchWhatsAppSignup}
+      disabled={connecting}
+    >
+      {connecting ? (
+        <>
+          <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+          Reconnecting...
+        </>
+      ) : (
+        <>
+          <RefreshCw className="mr-2 h-3.5 w-3.5" />
+          Reconnect
+        </>
+      )}
+    </Button>
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-red-600 hover:text-red-700"
-                  onClick={handleDisconnect}
-                  disabled={disconnecting}
-                >
-                  {disconnecting ? (
-                    <>
-                      <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
-                      Disconnecting...
-                    </>
-                  ) : (
-                    <>
-                      <Unplug className="mr-2 h-3.5 w-3.5" />
-                      Disconnect
-                    </>
-                  )}
-                </Button>
+    <Button
+      variant="outline"
+      size="sm"
+      className="text-red-600 hover:text-red-700"
+      onClick={handleDisconnect}
+      disabled={disconnecting}
+    >
+      {disconnecting ? (
+        <>
+          <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+          Disconnecting...
+        </>
+      ) : (
+        <>
+          <Unplug className="mr-2 h-3.5 w-3.5" />
+          Disconnect
+        </>
+      )}
+    </Button>
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => toast.info('Opening WhatsApp Manager...')}
-                >
-                  <Settings className="mr-2 h-3.5 w-3.5" />
-                  Manage
-                </Button>
-              </div>
-            </div>
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={() =>
+        toast.info('Opening WhatsApp Manager...')
+      }
+    >
+      <Settings className="mr-2 h-3.5 w-3.5" />
+      Manage
+    </Button>
+  </div>
+</div>
 
             {/* Webhook status */}
             <div className="rounded-xl border border-border bg-card p-6">
