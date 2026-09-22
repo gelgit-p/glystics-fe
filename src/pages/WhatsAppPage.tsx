@@ -969,34 +969,24 @@ const launchWhatsAppSignup = () => {
     return;
   }
 
+  // Persist the Facebook auth/token data first
+  await saveConnection(authResponse, appIdValue);
+
   try {
-    const businessResponse = await fbApi<{
-      data: MetaBusiness[];
-    }>('/me/businesses', {
-      fields:
-        'id,name,owned_whatsapp_business_accounts{id,name,currency,timezone_id,phone_numbers{id,display_phone_number,verified_name,quality_rating}}',
-    });
-
-    setBusinesses(businessResponse.data ?? []);
-
-    // Stop the loading state so the user can interact
-    // with the popup.
-    setConnecting(false);
-
-    // Show businesses BEFORE switching to connected UI.
-    setShowBusinessPopup(true);
-
-    // Keep auth data available for the next step.
-    // You can store this in state if the user must select
-    // a specific WABA before saving.
-  } catch (error) {
-    console.error(
-      'Failed to fetch Meta businesses:',
-      error,
+    const businessResponse = await fbApi<{ data: MetaBusiness[] }>(
+      '/me/businesses',
+      {
+        fields:
+          'id,name,owned_whatsapp_business_accounts{id,name,currency,timezone_id,phone_numbers{id,display_phone_number,verified_name,quality_rating}}',
+      },
     );
 
+    setBusinesses(businessResponse.data ?? []);
     setConnecting(false);
-
+    setShowBusinessPopup(true);
+  } catch (error) {
+    console.error('Failed to fetch Meta businesses:', error);
+    setConnecting(false);
     toast.error(
       error instanceof Error
         ? error.message
