@@ -603,9 +603,6 @@ function WhatsAppPreview({
 export default function TemplatesPage() {
   const queryClient = useQueryClient();
 
-  const [editing, setEditing] =
-    useState<FormattedTemplate | null>(null);
-
   const [creating, setCreating] = useState(false);
 
   const [deleting, setDeleting] =
@@ -652,47 +649,28 @@ const {
   /*                                  EDITOR                                  */
   /* ------------------------------------------------------------------------ */
 
-  const openEditor = (tpl?: FormattedTemplate) => {
-    if (tpl) {
-      setEditing(tpl);
+const openEditor = () => {
+  setCreating(true);
 
-      setForm(tpl);
-    } else {
-      setCreating(true);
+  setForm({
+    category: 'Utility',
+    language: 'English',
+    buttons: [],
+    variables: [],
+    header: '',
+    body: '',
+    footer: '',
+    name: '',
+    parameterFormat: 'NAMED',
+    headerFormat: 'TEXT',
+    rawButtons: [],
+  });
+};
 
-      setForm({
-        category: 'Utility',
-
-        language: 'English',
-
-        buttons: [],
-
-        variables: [],
-
-        header: '',
-
-        body: '',
-
-        footer: '',
-
-        name: '',
-
-        parameterFormat: 'NAMED',
-
-        headerFormat: 'TEXT',
-
-        rawButtons: [],
-      });
-    }
-  };
-
-  const closeEditor = () => {
-    setEditing(null);
-
-    setCreating(false);
-
-    setForm({});
-  };
+const closeEditor = () => {
+  setCreating(false);
+  setForm({});
+};
 
   /* ------------------------------------------------------------------------ */
   /*                                   SAVE                                   */
@@ -717,15 +695,9 @@ const {
         variables,
       };
 
-      if (editing) {
-        await api.updateTemplate(editing.id, data);
+      await api.createTemplate(data);
 
-        toast.success('Template updated');
-      } else {
-        await api.createTemplate(data);
-
-        toast.success('Template created');
-      }
+      toast.success('Template created');
 
       closeEditor();
 
@@ -734,12 +706,7 @@ const {
       });
     } catch (error) {
       console.error(error);
-
-      toast.error(
-        editing
-          ? 'Failed to update template'
-          : 'Failed to create template',
-      );
+      toast.error('Failed to create template');
     } finally {
       setSaving(false);
     }
@@ -771,7 +738,8 @@ const {
     }
   };
 
-  const isEditing = Boolean(editing || creating);
+  // const isEditing = Boolean(editing || creating);
+  const isEditing = creating;
 
   /* ------------------------------------------------------------------------ */
   /*                                  RENDER                                  */
@@ -997,16 +965,6 @@ const {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => openEditor(tpl)}
-                >
-                  <Pencil className="mr-1 h-3.5 w-3.5" />
-
-                  Edit
-                </Button>
-
-                <Button
-                  variant="ghost"
-                  size="sm"
                   className="text-red-600 hover:text-red-700"
                   onClick={() =>
                     setDeleting(tpl)
@@ -1032,11 +990,9 @@ const {
       >
         <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto scrollbar-thin">
           <DialogHeader>
-            <DialogTitle>
-              {editing
-                ? 'Edit Template'
-                : 'Create Template'}
-            </DialogTitle>
+          <DialogTitle>
+            Create Template
+          </DialogTitle>
           </DialogHeader>
 
           <div className="grid gap-6 md:grid-cols-2">
@@ -1285,11 +1241,7 @@ const {
               onClick={handleSave}
               disabled={saving}
             >
-              {saving
-                ? 'Saving...'
-                : editing
-                  ? 'Save Changes'
-                  : 'Create Template'}
+              {saving ? 'Saving...' : 'Create Template'}
             </Button>
           </DialogFooter>
         </DialogContent>
