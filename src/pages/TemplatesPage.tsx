@@ -304,7 +304,7 @@ async function fetchMessageTemplates(
   }
 
   const response = await fetch(
-    `${import.meta.env.VITE_API_URL}/whatsapp/message-templates?userId=${encodeURIComponent(userId)}`,
+    `${import.meta.env.VITE_API_URL}/whatsapp/message-templates/${encodeURIComponent(userId)}`,
     {
       method: 'GET',
       headers: {
