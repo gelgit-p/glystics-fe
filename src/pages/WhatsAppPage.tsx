@@ -800,16 +800,7 @@ console.log(selectedBusiness?.name, 'selected_business_name')
   }, []);
 
   type LongLivedTokenResponse = {
-  access_token?: string;
-  long_lived_token?: string;
-  longLivedToken?: string;
-  token?: string;
-  data?: {
-    access_token?: string;
-    long_lived_token?: string;
-    longLivedToken?: string;
-    token?: string;
-  };
+  accessToken?: string;
 };
 
 const getLongLivedFacebookToken = async (
@@ -845,14 +836,7 @@ const getLongLivedFacebookToken = async (
 
   // Supports the common possible response shapes.
   const longLivedToken =
-    result.access_token ||
-    result.long_lived_token ||
-    result.longLivedToken ||
-    result.token ||
-    result.data?.access_token ||
-    result.data?.long_lived_token ||
-    result.data?.longLivedToken ||
-    result.data?.token;
+    result.accessToken
 
   if (!longLivedToken) {
     throw new Error(
