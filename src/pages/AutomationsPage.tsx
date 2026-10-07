@@ -71,10 +71,54 @@ export default function AutomationsPage() {
   const [form, setForm] = useState<Partial<Automation>>({});
   const userId = localStorage.getItem('userId') ?? '';
 
-  const { data: automations, isLoading } = useQuery({
-    queryKey: ['automations'],
-    queryFn: () => api.getAutomations(),
-  });
+  // const { data: automations, isLoading } = useQuery({
+  //   queryKey: ['automations'],
+  //   queryFn: () => api.getAutomations(),
+  // });
+
+  const {
+  data: automations = [],
+  isLoading,
+  isError: isAutomationsError,
+  error: automationsError,
+} = useQuery<Automation[]>({
+  queryKey: ['automations', userId],
+
+  queryFn: async () => {
+    if (!userId) {
+      throw new Error('Logged-in user ID not found');
+    }
+
+    const response = await fetch(
+      `${import.meta.env.VITE_API_URL}/automations?userId=${encodeURIComponent(userId)}`,
+      {
+        method: 'GET',
+        headers: {
+          accept: '*/*',
+        },
+      },
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch automations: ${response.status} ${response.statusText}`,
+      );
+    }
+
+    const result: {
+      success: boolean;
+      data: Automation[];
+    } = await response.json();
+
+    return Array.isArray(result.data) ? result.data : [];
+  },
+
+  enabled: Boolean(userId),
+
+  staleTime: 30_000,
+
+  refetchOnWindowFocus: false,
+});
 
   const {
     data: messageTemplates = [],
