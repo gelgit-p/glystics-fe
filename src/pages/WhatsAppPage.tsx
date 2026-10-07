@@ -799,19 +799,240 @@ console.log(selectedBusiness?.name, 'selected_business_name')
     });
   }, []);
 
-const saveConnection = async (authResponse: any, appIdValue: string) => {
+  type LongLivedTokenResponse = {
+  access_token?: string;
+  long_lived_token?: string;
+  longLivedToken?: string;
+  token?: string;
+  data?: {
+    access_token?: string;
+    long_lived_token?: string;
+    longLivedToken?: string;
+    token?: string;
+  };
+};
+
+const getLongLivedFacebookToken = async (
+  accessToken: string,
+  userId: string,
+): Promise<string> => {
+  const url = new URL(
+    `${import.meta.env.VITE_API_URL}/whatsapp/long-lived-token`,
+  );
+
+  url.searchParams.set('access_token', accessToken);
+  url.searchParams.set('user_id', userId);
+
+  const response = await fetch(url.toString(), {
+    method: 'GET',
+    headers: {
+      accept: '*/*',
+    },
+  });
+
+  const result: LongLivedTokenResponse = await response
+    .json()
+    .catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(
+      (result as any)?.message ||
+        'Failed to generate Facebook long-lived access token',
+    );
+  }
+
+  console.log('Long-lived token response:', result);
+
+  // Supports the common possible response shapes.
+  const longLivedToken =
+    result.access_token ||
+    result.long_lived_token ||
+    result.longLivedToken ||
+    result.token ||
+    result.data?.access_token ||
+    result.data?.long_lived_token ||
+    result.data?.longLivedToken ||
+    result.data?.token;
+
+  if (!longLivedToken) {
+    throw new Error(
+      'Long-lived token was not returned by the server',
+    );
+  }
+
+  return longLivedToken;
+};
+
+const storeFacebookTokens = async ({
+  userId,
+  facebookAccessToken,
+  facebookLongLivedAccessToken,
+}: {
+  userId: string;
+  facebookAccessToken: string;
+  facebookLongLivedAccessToken: string;
+}) => {
+  const response = await fetch(
+    `${import.meta.env.VITE_API_URL}/whatsapp/store-token`,
+    {
+      method: 'POST',
+      headers: {
+        accept: '*/*',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        userId,
+        facebookAccessToken,
+        facebookLongLivedAccessToken,
+      }),
+    },
+  );
+
+  const result = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(
+      result?.message || 'Failed to store Facebook access tokens',
+    );
+  }
+
+  console.log('Facebook tokens stored successfully:', result);
+
+  return result;
+};
+
+const saveFacebookConnection = async (
+  authResponse: any,
+  appId: any,
+) => {
+  const userId = localStorage.getItem('userId');
+
+  if (!userId) {
+    throw new Error(
+      'User ID not found. Please log in again.',
+    );
+  }
+
+  if (!authResponse?.accessToken) {
+    throw new Error(
+      'Facebook access token was not returned.',
+    );
+  }
+
+  const facebookAccessToken = authResponse.accessToken;
+
+  /*
+   * 1. Exchange the short-lived Facebook token
+   *    for a long-lived token.
+   */
+  const facebookLongLivedAccessToken =
+    await getLongLivedFacebookToken(
+      facebookAccessToken,
+      userId,
+    );
+
+  console.log(
+    'Facebook access token:',
+    maskToken(facebookAccessToken),
+  );
+
+  console.log(
+    'Facebook long-lived token:',
+    maskToken(facebookLongLivedAccessToken),
+  );
+
+  /*
+   * 2. Store both tokens.
+   */
+  await storeFacebookTokens({
+    userId,
+    facebookAccessToken,
+    facebookLongLivedAccessToken,
+  });
+
+  /*
+   * 3. Continue saving the existing Facebook
+   *    connection information.
+   */
+  const response = await fetch(
+    `${import.meta.env.VITE_API_URL}/auth/update-user/${encodeURIComponent(
+      userId,
+    )}`,
+    {
+      method: 'POST',
+      headers: {
+        accept: '*/*',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        // Kept because this is the spelling currently
+        // expected by your existing backend.
+        facebookAcceessToken: facebookAccessToken,
+
+        appId,
+        grantedScopes: authResponse.grantedScopes,
+        accessTokenExpiresIn: String(
+          authResponse.expiresIn,
+        ),
+        facebookConnectStatus: true,
+        metaUserId: authResponse.userID,
+      }),
+    },
+  );
+
+  if (!response.ok) {
+    const error = await response
+      .json()
+      .catch(() => ({}));
+
+    throw new Error(
+      error.message ||
+        'Failed to save Facebook connection',
+    );
+  }
+
+  return response.json();
+};
+
+const saveConnection = async (
+  authResponse: any,
+  appIdValue: string,
+) => {
   try {
     setConnecting(true);
-    await saveFacebookConnection(authResponse, appIdValue);
-    setFbConnected(true);
-    await queryClient.invalidateQueries({ queryKey: ['whatsapp-connection'] });
-    toast.success('WhatsApp Business account connected successfully');
-  } catch (error) {
-    console.error('Failed to save Facebook connection:', error);
-    setFbConnected(false);
-    toast.error(
-      error instanceof Error ? error.message : 'Failed to save Facebook connection',
+
+    await saveFacebookConnection(
+      authResponse,
+      appIdValue,
     );
+
+    setFbConnected(true);
+
+    await queryClient.invalidateQueries({
+      queryKey: ['whatsapp-connection'],
+    });
+
+    toast.success(
+      'WhatsApp Business account connected successfully',
+    );
+  } catch (error) {
+    console.error(
+      'Failed to save Facebook connection:',
+      error,
+    );
+
+    setFbConnected(false);
+
+    toast.error(
+      error instanceof Error
+        ? error.message
+        : 'Failed to save Facebook connection',
+    );
+
+    // Important: rethrow so the login flow
+    // doesn't continue to WABA selection if
+    // token storage failed.
+    throw error;
   } finally {
     setConnecting(false);
   }
@@ -965,35 +1186,74 @@ const launchWhatsAppSignup = () => {
 
   if (!authResponse?.accessToken) {
     setConnecting(false);
-    toast.info('WhatsApp connection was cancelled');
+
+    toast.info(
+      'WhatsApp connection was cancelled',
+    );
+
     return;
   }
 
-  // Persist the Facebook auth/token data first
-  await saveConnection(authResponse, appIdValue);
-
   try {
-    const businessResponse = await fbApi<{ data: MetaBusiness[] }>(
-      '/me/businesses',
+    console.log(
+      'Facebook authentication successful:',
       {
-        fields:
-          'id,name,owned_whatsapp_business_accounts{id,name,currency,timezone_id,phone_numbers{id,display_phone_number,verified_name,quality_rating}}',
+        userID: authResponse.userID,
+        accessToken: maskToken(
+          authResponse.accessToken,
+        ),
+        expiresIn: authResponse.expiresIn,
+        grantedScopes:
+          authResponse.grantedScopes,
       },
     );
 
-    setBusinesses(businessResponse.data ?? []);
-    setConnecting(false);
+    /*
+     * This now performs:
+     *
+     * 1. GET /whatsapp/long-lived-token
+     * 2. POST /whatsapp/store-token
+     * 3. POST /auth/update-user/:id
+     */
+    await saveConnection(
+      authResponse,
+      appIdValue,
+    );
+
+    /*
+     * Only load WABAs after token creation
+     * and storage succeeds.
+     */
+    const businessResponse = await fbApi<{
+      data: MetaBusiness[];
+    }>('/me/businesses', {
+      fields:
+        'id,name,owned_whatsapp_business_accounts{id,name,currency,timezone_id,phone_numbers{id,display_phone_number,verified_name,quality_rating}}',
+    });
+
+    setBusinesses(
+      businessResponse.data ?? [],
+    );
+
     setShowBusinessPopup(true);
   } catch (error) {
-    console.error('Failed to fetch Meta businesses:', error);
-    setConnecting(false);
+    console.error(
+      'WhatsApp connection flow failed:',
+      error,
+    );
+
+    setFbConnected(false);
+
     toast.error(
       error instanceof Error
         ? error.message
-        : 'Failed to fetch your Meta businesses',
+        : 'Failed to connect WhatsApp Business',
     );
+  } finally {
+    setConnecting(false);
   }
 };
+
 
   try {
     initFacebook(trimmedAppId);
