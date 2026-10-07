@@ -294,12 +294,19 @@ function formatTemplate(template: MetaTemplate): FormattedTemplate {
  *   'https://glystics.onrender.com/whatsapp/message-templates' \
  *   -H 'accept: * / *'
  */
-async function fetchMessageTemplates(): Promise<FormattedTemplate[]> {
+async function fetchMessageTemplates(
+  userId: string,
+): Promise<FormattedTemplate[]> {
+  if (!userId) {
+    throw new Error(
+      'User ID is required to fetch message templates',
+    );
+  }
+
   const response = await fetch(
-    `${import.meta.env.VITE_API_URL}/whatsapp/message-templates`,
+    `${import.meta.env.VITE_API_URL}/whatsapp/message-templates?userId=${encodeURIComponent(userId)}`,
     {
       method: 'GET',
-
       headers: {
         accept: '*/*',
       },
@@ -307,12 +314,18 @@ async function fetchMessageTemplates(): Promise<FormattedTemplate[]> {
   );
 
   if (!response.ok) {
+    const error = await response
+      .json()
+      .catch(() => null);
+
     throw new Error(
-      `Failed to fetch templates: ${response.status} ${response.statusText}`,
+      error?.message ||
+        `Failed to fetch templates: ${response.status} ${response.statusText}`,
     );
   }
 
-  const result: MetaTemplatesResponse = await response.json();
+  const result: MetaTemplatesResponse =
+    await response.json();
 
   if (!Array.isArray(result.data)) {
     return [];
@@ -610,20 +623,30 @@ export default function TemplatesPage() {
   /*                               GET TEMPLATES                              */
   /* ------------------------------------------------------------------------ */
 
-  const {
-    data: templates = [],
-    isLoading,
-    isError,
-    error,
-  } = useQuery({
-    queryKey: ['whatsapp-message-templates'],
+const userId: string = localStorage.getItem('userId') ?? '';
 
-    queryFn: fetchMessageTemplates,
+const {
+  data: templates = [],
+  isLoading,
+  isError,
+  error,
+} = useQuery<FormattedTemplate[]>({
+  queryKey: ['whatsapp-message-templates', userId],
 
-    staleTime: 30_000,
+  queryFn: () => {
+    if (!userId) {
+      throw new Error('Logged-in user ID not found');
+    }
 
-    refetchOnWindowFocus: false,
-  });
+    return fetchMessageTemplates(userId);
+  },
+
+  enabled: Boolean(userId),
+
+  staleTime: 30_000,
+
+  refetchOnWindowFocus: false,
+});
 
   /* ------------------------------------------------------------------------ */
   /*                                  EDITOR                                  */
@@ -820,7 +843,15 @@ export default function TemplatesPage() {
                   </p>
                 </div>
 
-                <StatusBadge status={tpl.status} />
+              <span
+                className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                  tpl.status?.toUpperCase() === 'APPROVED'
+                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                    : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                }`}
+              >
+                {tpl.status}
+              </span>
               </div>
 
               {/* Metadata */}
