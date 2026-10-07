@@ -4,14 +4,11 @@ import { toast } from 'sonner';
 import {
   Plus,
   Zap,
-  ArrowRight,
   ArrowDown,
   Trash2,
   Pencil,
-  Settings2,
 } from 'lucide-react';
 import { api } from '@/lib/api';
-import { automations as mockAutomations, templates } from '@/lib/mock-data';
 import { PageHeader, LoadingState, EmptyState } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -72,15 +69,51 @@ export default function AutomationsPage() {
   const [deleting, setDeleting] = useState<Automation | null>(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<Partial<Automation>>({});
+  const userId = localStorage.getItem('userId') ?? '';
 
   const { data: automations, isLoading } = useQuery({
     queryKey: ['automations'],
     queryFn: () => api.getAutomations(),
   });
 
+  const {
+    data: messageTemplates = [],
+    isLoading: isLoadingTemplates,
+    isError: isTemplatesError,
+  } = useQuery<string[]>({
+    queryKey: ['whatsapp-message-template-names', userId],
+    queryFn: async () => {
+      if (!userId) {
+        throw new Error('Logged-in user ID not found');
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/whatsapp/message-templates/${encodeURIComponent(userId)}`,
+        {
+          method: 'GET',
+          headers: { accept: '*/*' },
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          `Failed to fetch templates: ${response.status} ${response.statusText}`,
+        );
+      }
+
+      const result: { data?: { name: string }[] } = await response.json();
+      return Array.isArray(result.data)
+        ? result.data.map((template) => template.name)
+        : [];
+    },
+    enabled: Boolean(userId),
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
+  });
+
   const openCreate = () => {
     setCreating(true);
-    setForm({ trigger: 'Shipment status changes', triggerValue: 'Out for Delivery', action: 'Send WhatsApp template', actionTemplate: 'out_for_delivery', name: '' });
+    setForm({ trigger: 'Shipment status changes', triggerValue: 'Out for Delivery', action: 'Send WhatsApp template', actionTemplate: messageTemplates[0] ?? '', name: '' });
   };
 
   const openEdit = (auto: Automation) => {
@@ -252,7 +285,13 @@ export default function AutomationsPage() {
                 <Select value={form.actionTemplate} onValueChange={(v) => setForm({ ...form, actionTemplate: v })}>
                   <SelectTrigger><SelectValue placeholder="Select template" /></SelectTrigger>
                   <SelectContent>
-                    {templates.map((t) => <SelectItem key={t.id} value={t.name}>{t.name}</SelectItem>)}
+                    {messageTemplates.map((name) => <SelectItem key={name} value={name}>{name}</SelectItem>)}
+                    {isLoadingTemplates && <SelectItem value="loading" disabled>Loading templates...</SelectItem>}
+                    {isTemplatesError && <SelectItem value="error" disabled>Failed to load templates</SelectItem>}
+                    {!userId && <SelectItem value="no-user" disabled>Log in to load templates</SelectItem>}
+                    {!isLoadingTemplates && !isTemplatesError && userId && messageTemplates.length === 0 && (
+                      <SelectItem value="empty" disabled>No templates available</SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
