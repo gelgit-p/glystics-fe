@@ -127,23 +127,94 @@ export default function AutomationsPage() {
     setForm({});
   };
 
-  const handleSave = async () => {
-    if (!form.name?.trim()) {
-      toast.error('Automation name is required');
-      return;
-    }
-    setSaving(true);
+const handleSave = async () => {
+  if (!userId) {
+    toast.error('Logged-in user ID not found');
+    return;
+  }
+
+  if (!form.name?.trim()) {
+    toast.error('Automation name is required');
+    return;
+  }
+
+  if (!form.trigger) {
+    toast.error('Trigger is required');
+    return;
+  }
+
+  if (!form.triggerValue) {
+    toast.error('Trigger status is required');
+    return;
+  }
+
+  if (!form.actionTemplate) {
+    toast.error('WhatsApp template is required');
+    return;
+  }
+
+  setSaving(true);
+
+  try {
+    const payload = {
+      userId,
+      name: form.name.trim(),
+      trigger: form.trigger,
+      triggerValue: form.triggerValue,
+      action: 'Send WhatsApp template',
+      actionTemplate: form.actionTemplate,
+      enabled: true,
+    };
+
     if (editing) {
-      await api.createAutomation(form);
+      // Replace with update endpoint when available.
+      await api.createAutomation(payload);
+
       toast.success('Automation updated');
     } else {
-      await api.createAutomation(form);
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/automations`,
+        {
+          method: 'POST',
+          headers: {
+            accept: '*/*',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        },
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+
+        throw new Error(
+          errorData?.message ||
+            `Failed to create automation: ${response.status} ${response.statusText}`,
+        );
+      }
+
+      await response.json();
+
       toast.success('Automation created');
     }
-    setSaving(false);
+
     closeEditor();
-    queryClient.invalidateQueries({ queryKey: ['automations'] });
-  };
+
+    await queryClient.invalidateQueries({
+      queryKey: ['automations'],
+    });
+  } catch (error) {
+    console.error('Failed to save automation:', error);
+
+    toast.error(
+      error instanceof Error
+        ? error.message
+        : 'Failed to create automation',
+    );
+  } finally {
+    setSaving(false);
+  }
+};
 
   const handleToggle = async (id: string) => {
     await api.toggleAutomation(id);
