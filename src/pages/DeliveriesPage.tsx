@@ -1109,7 +1109,7 @@ export default function DeliveriesPage() {
         duties_paid: true,
       };
 
-      console.log('Booking courier:', selectedCourier);
+      console.log('Booking couriers:', selectedCourier);
       console.log('Shipping label payload:', payload);
 
       const response = await fetch(
