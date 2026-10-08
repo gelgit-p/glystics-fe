@@ -1,11 +1,10 @@
 import { useState } from 'react';
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { Link } from 'react-router-dom';
 
 import { toast } from 'sonner';
-
 import {
   ArrowLeft,
   Clock,
@@ -91,6 +90,8 @@ const statusOptions = [
   'Failed',
 ];
 
+const queryClient = useQueryClient();
+
 const serviceTypes = [
   {
     label: 'Drop off',
@@ -162,7 +163,7 @@ interface ValidateAddressResponse {
 }
 
 interface Courier {
-  courier_id: string;
+  courier_id: string | number;
 
   courier_name: string;
 
@@ -1068,77 +1069,100 @@ export default function DeliveriesPage() {
    * BOOK COURIER
    * ===================================================== */
 
+
   const handleBookCourier = async (
     selectedCourier: Courier,
   ) => {
-    if (!rates) {
-      toast.error(
-        'Delivery rate information is missing.',
-      );
-
+    if (!rates?.request_token) {
+      toast.error('Shipping request token is missing.');
       return;
     }
 
-    setBookingCourierId(
-      selectedCourier.courier_id,
-    );
+    const courierId = String(selectedCourier.courier_id);
+
+    if (bookingCourierId !== null) {
+      return;
+    }
+
+    if (!selectedCourier.service_code) {
+      toast.error('Selected courier service code is missing.');
+      return;
+    }
+
+    setBookingCourierId(courierId);
 
     try {
-      /**
-       * We already have everything required
-       * for the next booking API:
-       *
-       * rates.request_token
-       * selectedCourier.courier_id
-       * selectedCourier.service_code
-       *
-       * Add your booking endpoint here.
-       */
+      // Insurance is optional when unavailable.
+      const insuranceCode =
+        selectedCourier.insurance?.code;
 
-      console.log(
-        'Selected courier:',
-        selectedCourier,
+      const payload = {
+        request_token: rates.request_token,
+        service_code: selectedCourier.service_code,
+        courier_id: courierId,
+        insurance_code:
+          insuranceCode &&
+          insuranceCode.toLowerCase() !== 'not available'
+            ? insuranceCode
+            : '',
+        is_cod_label: false,
+        duties_paid: true,
+      };
+
+      console.log('Booking courier:', selectedCourier);
+      console.log('Shipping label payload:', payload);
+
+      const response = await fetch(
+        `${API_BASE_URL}/shipping/labels`,
+        {
+          method: 'POST',
+          headers: {
+            accept: '*/*',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        },
       );
 
-      console.log(
-        'Request token:',
-        rates.request_token,
-      );
+      const result = await response.json().catch(() => {
+        throw new Error(
+          'Invalid response received while creating shipping label.',
+        );
+      });
 
-      console.log(
-        'Courier ID:',
-        selectedCourier.courier_id,
-      );
+      console.log('Shipping label response:', result);
 
-      console.log(
-        'Service code:',
-        selectedCourier.service_code,
-      );
+      if (!response.ok || result.status === 'error') {
+        throw new Error(
+          result.message ||
+            'Unable to create shipping label.',
+        );
+      }
 
       toast.success(
-        `${selectedCourier.courier_name} selected.`,
+        `Delivery booked successfully with ${selectedCourier.courier_name}.`,
       );
 
-      /**
-       * Don't close the dialog until
-       * the actual booking endpoint
-       * succeeds.
-       */
+      // Refresh the deliveries list.
+      await queryClient.invalidateQueries({
+        queryKey: ['deliveries'],
+      });
+
+      // Close dialog and reset form.
+      handleDialogChange(false);
     } catch (error) {
-      console.error(
-        'Booking error:',
-        error,
-      );
+      console.error('Courier booking error:', error);
 
       toast.error(
         error instanceof Error
           ? error.message
-          : 'Unable to book courier.',
+          : 'Unable to book selected courier.',
       );
     } finally {
       setBookingCourierId(null);
     }
   };
+
 
   /* =======================================================
    * RENDER
@@ -2375,23 +2399,24 @@ export default function DeliveriesPage() {
                                 'Not available'}
                             </p>
                           </div>
-
-                          <Button
-                            onClick={() =>
-                              handleBookCourier(
-                                deliveryCourier,
-                              )
-                            }
-                            disabled={
-                              bookingCourierId !==
-                              null
-                            }
-                          >
-                            {bookingCourierId ===
-                            deliveryCourier.courier_id
-                              ? 'Booking...'
-                              : 'Book Now'}
-                          </Button>
+                        <Button
+                          type="button"
+                          onClick={() => handleBookCourier(deliveryCourier)}
+                          disabled={bookingCourierId !== null}
+                        >
+                          {bookingCourierId ===
+                          String(deliveryCourier.courier_id) ? (
+                            <>
+                              <Truck className="mr-2 h-4 w-4 animate-pulse" />
+                              Booking...
+                            </>
+                          ) : (
+                            <>
+                              <Truck className="mr-2 h-4 w-4" />
+                              Book Now
+                            </>
+                          )}
+                        </Button>
                         </div>
                       </div>
                     ),
