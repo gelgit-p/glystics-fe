@@ -73,7 +73,7 @@ import { Textarea } from '@/components/ui/textarea';
  * API
  * ======================================================= */
 
-const API_BASE_URL = 'https://glystics.onrender.com';
+// const API_BASE_URL = 'https://glystics.onrender.com';
 
 /* =========================================================
  * CONSTANTS
@@ -386,7 +386,7 @@ const validateAddress = async ({
   address: string;
 }): Promise<ValidatedAddress> => {
   const response = await fetch(
-    `${API_BASE_URL}/shipping/address/validate`,
+    `${import.meta.env.VITE_API_URL}/shipping/address/validate`,
     {
       method: 'POST',
 
@@ -543,7 +543,7 @@ export default function DeliveriesPage() {
 
     queryFn: async () => {
       const response = await fetch(
-        `${API_BASE_URL}/shipping/labels/categories`,
+        `${import.meta.env.VITE_API_URL}/shipping/labels/categories`,
         {
           method: 'GET',
 
@@ -969,7 +969,7 @@ export default function DeliveriesPage() {
        * ================================================= */
 
       const response = await fetch(
-        `${API_BASE_URL}/shipping/fetch_rates`,
+        `${import.meta.env.VITE_API_URL}/shipping/fetch_rates`,
         {
           method: 'POST',
 
@@ -1113,7 +1113,7 @@ export default function DeliveriesPage() {
       console.log('Shipping label payload:', payload);
 
       const response = await fetch(
-        `${API_BASE_URL}/shipping/labels`,
+        `${import.meta.env.VITE_API_URL}/shipping/labels`,
         {
           method: 'POST',
           headers: {
