@@ -188,7 +188,7 @@ function DisconnectedView({
     <Input
       id="facebook-app-id"
       inputMode="numeric"
-      placeholder="e.g. 1094705089173300"
+      placeholder="e.g. 1094925073818241"
       value={appId}
       onChange={(e) => onAppIdChange(e.target.value)}
       disabled={connecting}
