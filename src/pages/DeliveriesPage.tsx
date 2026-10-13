@@ -90,8 +90,6 @@ const statusOptions = [
   'Failed',
 ];
 
-const queryClient = useQueryClient();
-
 const serviceTypes = [
   {
     label: 'Drop off',
@@ -444,6 +442,8 @@ const validateAddress = async ({
  * ======================================================= */
 
 export default function DeliveriesPage() {
+  const queryClient = useQueryClient();
+
   /* =======================================================
    * FILTER STATE
    * ===================================================== */
