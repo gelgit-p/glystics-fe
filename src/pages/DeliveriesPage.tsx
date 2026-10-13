@@ -20,10 +20,9 @@ import {
   Truck,
 } from 'lucide-react';
 
-import { api } from '@/lib/api';
-
 import {
   EmptyState,
+  ErrorState,
   LoadingState,
   PageHeader,
   StatusBadge,
@@ -115,6 +114,50 @@ interface CategoryResponse {
   message: string;
   data: ShippingCategory[];
 }
+
+interface DeliveryRecord {
+  id: string;
+  trackingId: string;
+  receiverName: string;
+  receiverPhone: string;
+  senderAddress: string;
+  receiverAddress: string;
+  deliveryStatus: string;
+  createdAt: string;
+}
+
+interface DeliveryTableRow {
+  id: string;
+  trackingId: string;
+  receiverName: string;
+  receiverPhone: string;
+  origin: string;
+  destination: string;
+  courier: string;
+  status: string;
+  createdAt: string;
+}
+
+const isDeliveryRecord = (
+  value: unknown,
+): value is DeliveryRecord => {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+
+  return (
+    typeof record.id === 'string' &&
+    typeof record.trackingId === 'string' &&
+    typeof record.receiverName === 'string' &&
+    typeof record.receiverPhone === 'string' &&
+    typeof record.senderAddress === 'string' &&
+    typeof record.receiverAddress === 'string' &&
+    typeof record.deliveryStatus === 'string' &&
+    typeof record.createdAt === 'string'
+  );
+};
 
 interface ValidatedAddress {
   address_code: number;
@@ -443,6 +486,7 @@ const validateAddress = async ({
 
 export default function DeliveriesPage() {
   const queryClient = useQueryClient();
+  const userId = localStorage.getItem('userId') ?? '';
 
   /* =======================================================
    * FILTER STATE
@@ -473,6 +517,8 @@ export default function DeliveriesPage() {
     bookingCourierId,
     setBookingCourierId,
   ] = useState<string | null>(null);
+
+  const [deliverySaved, setDeliverySaved] = useState(false);
 
   /* =======================================================
    * FORM STATE
@@ -511,9 +557,13 @@ export default function DeliveriesPage() {
   const {
     data: deliveries,
     isLoading,
+    isError,
+    error,
+    refetch,
   } = useQuery({
     queryKey: [
       'deliveries',
+      userId,
       {
         search,
         status,
@@ -521,12 +571,68 @@ export default function DeliveriesPage() {
       },
     ],
 
-    queryFn: () =>
-      api.getDeliveries({
-        search,
-        status,
-        courier,
-      }),
+    queryFn: async (): Promise<DeliveryTableRow[]> => {
+      if (!userId) {
+        throw new Error('Logged-in user ID not found.');
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/delivery/${encodeURIComponent(userId)}`,
+        {
+          method: 'GET',
+          headers: { accept: '*/*' },
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          `Unable to fetch deliveries: ${response.status} ${response.statusText}`,
+        );
+      }
+
+      const result: unknown = await response.json();
+
+      if (!Array.isArray(result)) {
+        throw new Error('Invalid deliveries response received from the server.');
+      }
+
+      const records = result.filter(isDeliveryRecord);
+
+      if (records.length !== result.length) {
+        throw new Error('Invalid delivery record received from the server.');
+      }
+
+      return records
+        .map((delivery) => ({
+          id: delivery.id,
+          trackingId: delivery.trackingId,
+          receiverName: delivery.receiverName,
+          receiverPhone: delivery.receiverPhone,
+          origin: delivery.senderAddress,
+          destination: delivery.receiverAddress,
+          courier: 'Not assigned',
+          status: delivery.deliveryStatus
+            .toLowerCase()
+            .replace(/_/g, ' ')
+            .replace(/\b\w/g, (character) => character.toUpperCase()),
+          createdAt: delivery.createdAt,
+        }))
+        .filter((delivery) => {
+          const searchTerm = search.trim().toLowerCase();
+          const matchesSearch =
+            !searchTerm ||
+            delivery.trackingId.toLowerCase().includes(searchTerm) ||
+            delivery.receiverName.toLowerCase().includes(searchTerm) ||
+            delivery.origin.toLowerCase().includes(searchTerm) ||
+            delivery.destination.toLowerCase().includes(searchTerm);
+          const matchesStatus =
+            status === 'all' || delivery.status === status;
+          const matchesCourier =
+            courier === 'all' || delivery.courier === courier;
+
+          return matchesSearch && matchesStatus && matchesCourier;
+        });
+    },
   });
 
   /* =======================================================
@@ -612,6 +718,8 @@ export default function DeliveriesPage() {
     setFetchingRates(false);
 
     setBookingCourierId(null);
+
+    setDeliverySaved(false);
 
     setFormData(initialFormState);
   };
@@ -1092,6 +1200,73 @@ export default function DeliveriesPage() {
     setBookingCourierId(courierId);
 
     try {
+      if (!deliverySaved) {
+        const userId = localStorage.getItem('userId');
+
+        if (!userId) {
+          throw new Error('Logged-in user ID not found.');
+        }
+
+        const selectedCategory = categories.find(
+          (category) =>
+            category.category_id === Number(formData.categoryId),
+        );
+
+        if (!selectedCategory) {
+          throw new Error('Selected package category was not found.');
+        }
+
+        const deliveryPayload = {
+          senderName: formData.senderName.trim(),
+          userId,
+          senderPhone: formData.senderPhone.trim(),
+          senderAddress: formData.senderAddress.trim(),
+          receiverName: formData.receiverName.trim(),
+          receiverPhone: formData.receiverPhone.trim(),
+          receiverAddress: formData.receiverAddress.trim(),
+          packageName: formData.packageName.trim(),
+          packageCategory: selectedCategory.category,
+          packageWeight: formData.weight,
+          packageDimensions: `${formData.length || '0'}x${formData.width || '0'}x${formData.height || '0'}`,
+          packageValue: formData.amount,
+          pickupDate: formData.pickupDate,
+          deliveryType: formData.serviceType,
+          deliveryInstructions: formData.instructions.trim(),
+        };
+
+        const saveResponse = await fetch(
+          `${import.meta.env.VITE_API_URL}/delivery`,
+          {
+            method: 'POST',
+            headers: {
+              accept: '*/*',
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(deliveryPayload),
+          },
+        );
+
+        const saveResult = await saveResponse.json().catch(() => {
+          throw new Error(
+            'Invalid response received while saving delivery details.',
+          );
+        });
+
+        if (!saveResponse.ok) {
+          const message = Array.isArray(saveResult?.message)
+            ? saveResult.message.join(', ')
+            : saveResult?.message;
+
+          throw new Error(message || 'Unable to save delivery details.');
+        }
+
+        setDeliverySaved(true);
+        await queryClient.invalidateQueries({
+          queryKey: ['deliveries'],
+        });
+        toast.success('Delivery details saved.');
+      }
+
       // Insurance is optional when unavailable.
       const insuranceCode =
         selectedCourier.insurance?.code;
@@ -1151,7 +1326,7 @@ export default function DeliveriesPage() {
       // Close dialog and reset form.
       handleDialogChange(false);
     } catch (error) {
-      console.error('Courier booking error:', error);
+      console.error('Delivery booking error:', error);
 
       toast.error(
         error instanceof Error
@@ -2512,6 +2687,15 @@ export default function DeliveriesPage() {
       <div className="rounded-xl border border-border bg-card">
         {isLoading ? (
           <LoadingState />
+        ) : isError ? (
+          <ErrorState
+            message={
+              error instanceof Error
+                ? error.message
+                : 'Unable to load deliveries.'
+            }
+            onRetry={() => void refetch()}
+          />
         ) : !deliveries ||
           deliveries.length === 0 ? (
           <EmptyState
