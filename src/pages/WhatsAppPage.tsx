@@ -10,7 +10,6 @@ import {
   RefreshCw,
   Unplug,
   Settings,
-  Webhook,
   Send,
   Mail,
   MailOpen,
@@ -29,7 +28,6 @@ import {
 import { api } from '@/lib/api';
 import {
   PageHeader,
-  StatusBadge,
   LoadingState,
 } from '@/components/shared';
 import {
@@ -676,8 +674,6 @@ type MetaBusiness = {
 };
 
 type WhatsAppConnection = {
-  webhookStatus: string;
-  lastEvent: string;
   messageHealth: {
     sent: number;
     delivered: number;
@@ -1360,19 +1356,6 @@ const handleDisconnect = async () => {
           : old,
     );
 
-    // Also update the local connection cache
-    queryClient.setQueryData(
-      ['whatsapp-connection'],
-      (old: WhatsAppConnection | undefined) => {
-        if (!old) return old;
-
-        return {
-          ...old,
-          webhookStatus: 'Disconnected',
-        };
-      },
-    );
-
     // Keep local state in sync
     setFbConnected(false);
 
@@ -1462,7 +1445,7 @@ const handleDisconnect = async () => {
             />
       ) : (
         <div className="space-y-6">
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid gap-6">
             {/* Connection status */}
             <div className="rounded-xl border border-border bg-card p-6">
   <div className="mb-4 flex items-center justify-between">
@@ -1581,71 +1564,6 @@ const handleDisconnect = async () => {
       </div>
     </div>
 
-            {/* Webhook status */}
-            <div className="rounded-xl border border-border bg-card p-6">
-              <div className="mb-4 flex items-center justify-between">
-                <h3 className="flex items-center gap-2 text-base font-semibold">
-                  <Webhook className="h-5 w-5 text-muted-foreground" />
-                  Webhook Status
-                </h3>
-
-                <StatusBadge status={conn.webhookStatus} />
-              </div>
-
-              <div className="rounded-lg border border-border p-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-50 dark:bg-emerald-950">
-                    <Check className="h-5 w-5 text-emerald-600" />
-                  </div>
-
-                  <div>
-                    <p className="text-sm font-medium">
-                      Webhook is active
-                    </p>
-
-                    <p className="text-xs text-muted-foreground">
-                      Last event received:{' '}
-                      {conn.lastEvent}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-4 space-y-2">
-                <p className="text-xs font-semibold uppercase text-muted-foreground">
-                  Subscribed Events
-                </p>
-
-                <div className="flex flex-wrap gap-1.5">
-                  {[
-                    'message.sent',
-                    'message.delivered',
-                    'message.read',
-                    'message.failed',
-                    'delivery.created',
-                    'delivery.updated',
-                    'delivery.delivered',
-                  ].map((event) => (
-                    <span
-                      key={event}
-                      className="rounded-md bg-muted px-2 py-1 font-mono text-xs text-muted-foreground"
-                    >
-                      {event}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-4"
-                onClick={() => toast.info('Opening webhook settings...')}
-              >
-                <Settings className="mr-2 h-3.5 w-3.5" />
-                Configure Webhook
-              </Button>
-            </div>
           </div>
 
           {/* Message health */}
