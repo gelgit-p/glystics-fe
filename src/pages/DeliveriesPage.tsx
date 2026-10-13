@@ -52,6 +52,8 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -325,6 +327,27 @@ interface RatesResponse {
   data: RatesData;
 }
 
+interface InsuranceRate {
+  code: string;
+  insurer: string;
+  currency: string;
+  insure_percentage: number;
+  amount: number;
+  policy_condition: string;
+}
+
+interface InsuranceRatesResponse {
+  status: string;
+  message: string;
+  data: InsuranceRate[];
+}
+
+interface ShippingLabelResponse {
+  status: string;
+  message: string;
+  errors?: string[];
+}
+
 interface DeliveryFormState {
   /* Sender */
 
@@ -519,6 +542,14 @@ export default function DeliveriesPage() {
   ] = useState<string | null>(null);
 
   const [deliverySaved, setDeliverySaved] = useState(false);
+
+  const [insuranceDialogOpen, setInsuranceDialogOpen] = useState(false);
+
+  const [insuranceOptions, setInsuranceOptions] = useState<InsuranceRate[]>([]);
+
+  const [selectedInsuranceCode, setSelectedInsuranceCode] = useState('');
+
+  const [pendingCourier, setPendingCourier] = useState<Courier | null>(null);
 
   /* =======================================================
    * FORM STATE
@@ -720,6 +751,14 @@ export default function DeliveriesPage() {
     setBookingCourierId(null);
 
     setDeliverySaved(false);
+
+    setInsuranceDialogOpen(false);
+
+    setInsuranceOptions([]);
+
+    setSelectedInsuranceCode('');
+
+    setPendingCourier(null);
 
     setFormData(initialFormState);
   };
@@ -1200,6 +1239,77 @@ export default function DeliveriesPage() {
     setBookingCourierId(courierId);
 
     try {
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/shipping/insurance_rates?request_token=${encodeURIComponent(rates.request_token)}`,
+        {
+          method: 'GET',
+          headers: { accept: '*/*' },
+        },
+      );
+
+      const result = (await response.json().catch(() => {
+        throw new Error(
+          'Invalid response received while fetching insurance rates.',
+        );
+      })) as InsuranceRatesResponse;
+
+      if (!response.ok || result.status !== 'success') {
+        throw new Error(
+          result.message || 'Unable to fetch insurance rates.',
+        );
+      }
+
+      if (!Array.isArray(result.data)) {
+        throw new Error('Invalid insurance rates response.');
+      }
+
+      if (result.data.length > 0) {
+        setPendingCourier(selectedCourier);
+        setInsuranceOptions(result.data);
+        setSelectedInsuranceCode('');
+        setInsuranceDialogOpen(true);
+        return;
+      }
+    } catch (error) {
+      console.error('Insurance rates error:', error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : 'Unable to fetch insurance rates.',
+      );
+      return;
+    } finally {
+      setBookingCourierId(null);
+    }
+
+    const courierInsuranceCode = selectedCourier.insurance?.code;
+    await completeCourierBooking(
+      selectedCourier,
+      courierInsuranceCode &&
+        courierInsuranceCode.toLowerCase() !== 'not available'
+        ? courierInsuranceCode
+        : '',
+    );
+  };
+
+  const completeCourierBooking = async (
+    selectedCourier: Courier,
+    insuranceCode: string,
+  ) => {
+    if (!rates?.request_token) {
+      toast.error('Shipping request token is missing.');
+      return;
+    }
+
+    const courierId = String(selectedCourier.courier_id);
+
+    if (bookingCourierId !== null) {
+      return;
+    }
+
+    setBookingCourierId(courierId);
+
+    try {
       if (!deliverySaved) {
         const userId = localStorage.getItem('userId');
 
@@ -1267,19 +1377,11 @@ export default function DeliveriesPage() {
         toast.success('Delivery details saved.');
       }
 
-      // Insurance is optional when unavailable.
-      const insuranceCode =
-        selectedCourier.insurance?.code;
-
       const payload = {
         request_token: rates.request_token,
         service_code: selectedCourier.service_code,
         courier_id: courierId,
-        insurance_code:
-          insuranceCode &&
-          insuranceCode.toLowerCase() !== 'not available'
-            ? insuranceCode
-            : '',
+        insurance_code: insuranceCode,
         is_cod_label: false,
         duties_paid: true,
       };
@@ -1299,17 +1401,18 @@ export default function DeliveriesPage() {
         },
       );
 
-      const result = await response.json().catch(() => {
+      const result = (await response.json().catch(() => {
         throw new Error(
           'Invalid response received while creating shipping label.',
         );
-      });
+      })) as ShippingLabelResponse;
 
       console.log('Shipping label response:', result);
 
-      if (!response.ok || result.status === 'error') {
+      if (!response.ok || result.status !== 'success') {
         throw new Error(
-          result.message ||
+          result.errors?.join(', ') ||
+            result.message ||
             'Unable to create shipping label.',
         );
       }
@@ -1324,6 +1427,7 @@ export default function DeliveriesPage() {
       });
 
       // Close dialog and reset form.
+      setInsuranceDialogOpen(false);
       handleDialogChange(false);
     } catch (error) {
       console.error('Delivery booking error:', error);
@@ -1336,6 +1440,19 @@ export default function DeliveriesPage() {
     } finally {
       setBookingCourierId(null);
     }
+  };
+
+  const handleConfirmInsurance = () => {
+    if (!pendingCourier || !selectedInsuranceCode) {
+      toast.error('Select an insurance option to continue.');
+      return;
+    }
+
+    setInsuranceDialogOpen(false);
+    void completeCourierBooking(
+      pendingCourier,
+      selectedInsuranceCode,
+    );
   };
 
 
@@ -2627,6 +2744,69 @@ export default function DeliveriesPage() {
                 </div>
               </div>
             )}
+          </DialogContent>
+        </Dialog>
+
+        <Dialog
+          open={insuranceDialogOpen}
+          onOpenChange={setInsuranceDialogOpen}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Select shipment insurance</DialogTitle>
+              <DialogDescription>
+                Choose an insurance policy before booking with{' '}
+                {pendingCourier?.courier_name}.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-2">
+              <Label htmlFor="insurance-option">Insurance policy</Label>
+              <Select
+                value={selectedInsuranceCode}
+                onValueChange={setSelectedInsuranceCode}
+              >
+                <SelectTrigger id="insurance-option">
+                  <SelectValue placeholder="Choose an insurance policy" />
+                </SelectTrigger>
+                <SelectContent>
+                  {insuranceOptions.map((option) => (
+                    <SelectItem key={option.code} value={option.code}>
+                      {option.insurer} -{' '}
+                      {new Intl.NumberFormat('en-NG', {
+                        style: 'currency',
+                        currency: option.currency,
+                        maximumFractionDigits: 2,
+                      }).format(option.amount)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {selectedInsuranceCode && (
+                <p className="text-sm text-muted-foreground">
+                  {
+                    insuranceOptions.find(
+                      (option) => option.code === selectedInsuranceCode,
+                    )?.policy_condition
+                  }
+                </p>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setInsuranceDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleConfirmInsurance}
+                disabled={!selectedInsuranceCode || bookingCourierId !== null}
+              >
+                Continue to booking
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </PageHeader>
