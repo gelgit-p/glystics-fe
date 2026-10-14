@@ -197,6 +197,24 @@ function getVariables(body: string): string[] {
   return Array.from(new Set(Array.from(matches).map((match) => match[1])));
 }
 
+function isValidVariable(
+  variable: string,
+  parameterFormat: 'NAMED' | 'POSITIONAL',
+): boolean {
+  return parameterFormat === 'POSITIONAL'
+    ? /^\d+$/.test(variable)
+    : /^[a-z0-9_]+$/.test(variable);
+}
+
+function suggestNamedVariable(variable: string): string {
+  return variable
+    .trim()
+    .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+    .replace(/[^a-zA-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .toLowerCase();
+}
+
 function getExamples(
   component?: MetaTemplateComponent,
 ): Record<string, string> {
@@ -746,44 +764,35 @@ const closeEditor = () => {
     const variables = getVariables(form.body);
     const examples = form.examples ?? {};
     const parameterFormat = form.parameterFormat ?? 'NAMED';
+    const invalidVariables = variables.filter(
+      (variable) => !isValidVariable(variable, parameterFormat),
+    );
     const missingExamples = variables.filter(
       (variable) => !examples[variable]?.trim(),
     );
 
-    const hasInvalidParameterFormat = variables.some((variable) =>
-      parameterFormat === 'POSITIONAL'
-        ? !/^\d+$/.test(variable)
-        : /^\d+$/.test(variable),
-    );
-    const invalidNamedVariables =
-      parameterFormat === 'NAMED'
-        ? variables.filter((variable) => !/^[a-z0-9_]+$/.test(variable))
-        : [];
-
-    if (hasInvalidParameterFormat) {
+    if (invalidVariables.length > 0) {
+      const suggestions = invalidVariables
+        .map((variable) => {
+          const replacement =
+            parameterFormat === 'POSITIONAL'
+              ? 'a number such as {{1}}'
+              : `{{${suggestNamedVariable(variable)}}}`;
+          return `{{${variable}}} → ${replacement}`;
+        })
+        .join('; ');
       toast.error(
-        parameterFormat === 'POSITIONAL'
-          ? 'Positional parameters must use numeric placeholders such as {{1}}.'
-          : 'Named parameters must use names such as {{customer_name}}.',
+        `Invalid ${parameterFormat.toLowerCase()} placeholder(s): ${suggestions}`,
       );
       return;
-    }
-
-    if (invalidNamedVariables.length > 0) {
-      toast.error(
-        `Named parameters must use lowercase letters, numbers, and underscores. Rename: ${invalidNamedVariables
-          .map((variable) => `{{${variable}}}`)
-          .join(', ')}`,
-      );
-      return;
-    }
+    };
 
     if (missingExamples.length > 0) {
       toast.error(
         `Add example values for: ${missingExamples.join(', ')}`,
       );
       return;
-    }
+    };
 
     try {
       setSaving(true);
@@ -896,6 +905,11 @@ const closeEditor = () => {
 
   // const isEditing = Boolean(editing || creating);
   const isEditing = creating;
+  const detectedVariables = getVariables(form.body ?? '');
+  const parameterFormat = form.parameterFormat ?? 'NAMED';
+  const invalidVariables = detectedVariables.filter(
+    (variable) => !isValidVariable(variable, parameterFormat),
+  );
 
   /* ------------------------------------------------------------------------ */
   /*                                  RENDER                                  */
@@ -1375,13 +1389,16 @@ const closeEditor = () => {
                   </Label>
 
                   <div className="flex flex-wrap gap-1">
-                    {getVariables(form.body).length >
-                    0 ? (
-                      getVariables(form.body).map(
+                    {detectedVariables.length > 0 ? (
+                      detectedVariables.map(
                         (variable) => (
                           <span
                             key={variable}
-                            className="rounded-md bg-accent px-2 py-1 font-mono text-xs"
+                            className={`rounded-md px-2 py-1 font-mono text-xs ${
+                              isValidVariable(variable, parameterFormat)
+                                ? 'bg-accent'
+                                : 'border border-destructive bg-destructive/10 text-destructive'
+                            }`}
                           >
                             {`{{${variable}}}`}
                           </span>
@@ -1393,6 +1410,19 @@ const closeEditor = () => {
                       </span>
                     )}
                   </div>
+                  {invalidVariables.length > 0 && (
+                    <p className="text-xs text-destructive">
+                      These placeholders are invalid for {parameterFormat.toLowerCase()} format:{' '}
+                      {invalidVariables.map((variable, index) => (
+                        <span key={variable}>
+                          {index > 0 ? ', ' : ''}
+                          <code>{`{{${variable}}}`}</code>
+                          {parameterFormat === 'NAMED' &&
+                            ` (try {{${suggestNamedVariable(variable)}}})`}
+                        </span>
+                      ))}
+                    </p>
+                  )}
                 </div>
               )}
 
