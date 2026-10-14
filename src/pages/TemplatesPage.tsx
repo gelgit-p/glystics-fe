@@ -714,7 +714,7 @@ const {
   isError,
   error,
 } = useQuery<FormattedTemplate[]>({
-  queryKey: ['whatsapp-message-templates', userId],
+  queryKey: ['whatsapp-message-templates', userId, statusFilter],
 
   queryFn: () => {
     if (!userId) {
@@ -726,7 +726,8 @@ const {
 
   enabled: Boolean(userId),
 
-  staleTime: 30_000,
+  staleTime: 0,
+  refetchOnMount: 'always',
 
   refetchOnWindowFocus: false,
 });
