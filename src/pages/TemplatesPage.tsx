@@ -337,9 +337,20 @@ async function fetchMessageTemplates(
   const result: MetaTemplatesResponse =
     await response.json();
 
+    console.log('Backend templates response:', result.data);
+console.log(
+  'Template statuses:',
+  result.data?.map((template) => ({
+    name: template.name,
+    status: template.status,
+  })),
+);
+
   if (!Array.isArray(result.data)) {
     return [];
   }
+
+
 
   return result.data.map(formatTemplate);
 }
