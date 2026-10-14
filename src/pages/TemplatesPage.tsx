@@ -75,6 +75,16 @@ const languages = [
   'Igbo',
 ];
 
+const languageCodes: Record<string, string> = {
+  English: 'en_US',
+  French: 'fr',
+  Spanish: 'es',
+  Arabic: 'ar',
+  Hausa: 'ha',
+  Yoruba: 'yo',
+  Igbo: 'ig',
+};
+
 /* -------------------------------------------------------------------------- */
 /*                                   TYPES                                    */
 /* -------------------------------------------------------------------------- */
@@ -332,6 +342,42 @@ async function fetchMessageTemplates(
   }
 
   return result.data.map(formatTemplate);
+}
+
+async function createWhatsAppTemplate(payload: {
+  name: string;
+  language: string;
+  category: string;
+  parameter_format: string;
+  components: MetaTemplateComponent[];
+}): Promise<void> {
+  const response = await fetch(
+    `${import.meta.env.VITE_API_URL}/whatsapp/message-templates`,
+    {
+      method: 'POST',
+      headers: {
+        accept: '*/*',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    },
+  );
+
+  const result: unknown = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    const error = result as
+      | { message?: string | string[]; error?: string }
+      | null;
+    const message = Array.isArray(error?.message)
+      ? error.message.join(', ')
+      : error?.message ?? error?.error;
+
+    throw new Error(
+      message ||
+        `Failed to create template: ${response.status} ${response.statusText}`,
+    );
+  }
 }
 
 /* -------------------------------------------------------------------------- */
@@ -664,6 +710,7 @@ const openEditor = () => {
     parameterFormat: 'NAMED',
     headerFormat: 'TEXT',
     rawButtons: [],
+    examples: {},
   });
 };
 
@@ -685,17 +732,98 @@ const closeEditor = () => {
       return;
     }
 
+    const variables = getVariables(form.body);
+    const examples = form.examples ?? {};
+    const parameterFormat = form.parameterFormat ?? 'NAMED';
+    const missingExamples = variables.filter(
+      (variable) => !examples[variable]?.trim(),
+    );
+
+    const hasInvalidParameterFormat = variables.some((variable) =>
+      parameterFormat === 'POSITIONAL'
+        ? !/^\d+$/.test(variable)
+        : /^\d+$/.test(variable),
+    );
+
+    if (hasInvalidParameterFormat) {
+      toast.error(
+        parameterFormat === 'POSITIONAL'
+          ? 'Positional parameters must use numeric placeholders such as {{1}}.'
+          : 'Named parameters must use names such as {{customer_name}}.',
+      );
+      return;
+    }
+
+    if (missingExamples.length > 0) {
+      toast.error(
+        `Add example values for: ${missingExamples.join(', ')}`,
+      );
+      return;
+    }
+
     try {
       setSaving(true);
 
-      const variables = getVariables(form.body);
+      const components: MetaTemplateComponent[] = [];
 
-      const data = {
-        ...form,
-        variables,
-      };
+      if (form.header?.trim()) {
+        components.push({
+          type: 'header',
+          format: 'TEXT',
+          text: form.header.trim(),
+        });
+      }
 
-      await api.createTemplate(data);
+      components.push({
+        type: 'body',
+        text: form.body.trim(),
+        ...(variables.length > 0
+          ? {
+              example:
+                parameterFormat === 'POSITIONAL'
+                  ? {
+                      body_text: [
+                        variables.map((variable) =>
+                          examples[variable].trim(),
+                        ),
+                      ],
+                    }
+                  : {
+                      body_text_named_params: variables.map(
+                        (variable) => ({
+                          param_name: variable,
+                          example: examples[variable].trim(),
+                        }),
+                      ),
+                    },
+            }
+          : {}),
+      });
+
+      if (form.footer?.trim()) {
+        components.push({
+          type: 'footer',
+          text: form.footer.trim(),
+        });
+      }
+
+      if (form.rawButtons?.length) {
+        components.push({
+          type: 'buttons',
+          buttons: form.rawButtons.map((button) => ({
+            ...button,
+            type: button.type.toUpperCase(),
+          })),
+        });
+      }
+
+      await createWhatsAppTemplate({
+        name: form.name.trim().toLowerCase().replace(/\s+/g, '_'),
+        language: languageCodes[form.language ?? 'English'] ?? 'en_US',
+        category: (form.category ?? 'Utility').toLowerCase(),
+        parameter_format: parameterFormat,
+        components,
+      });
 
       toast.success('Template created');
 
@@ -706,7 +834,11 @@ const closeEditor = () => {
       });
     } catch (error) {
       console.error(error);
-      toast.error('Failed to create template');
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : 'Failed to create template',
+      );
     } finally {
       setSaving(false);
     }
@@ -1081,6 +1213,27 @@ const closeEditor = () => {
                 </div>
               </div>
 
+              <div className="space-y-1.5">
+                <Label>Parameter format</Label>
+                <Select
+                  value={form.parameterFormat ?? 'NAMED'}
+                  onValueChange={(value: 'NAMED' | 'POSITIONAL') =>
+                    setForm({
+                      ...form,
+                      parameterFormat: value,
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="NAMED">Named</SelectItem>
+                    <SelectItem value="POSITIONAL">Positional</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               {/* Header */}
 
               <div className="space-y-1.5">
@@ -1216,6 +1369,38 @@ const closeEditor = () => {
                       </span>
                     )}
                   </div>
+                </div>
+              )}
+
+              {form.body && getVariables(form.body).length > 0 && (
+                <div className="space-y-3">
+                  <div>
+                    <Label>Example values</Label>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      WhatsApp requires sample values for template parameters.
+                    </p>
+                  </div>
+                  {getVariables(form.body).map((variable) => (
+                    <div key={variable} className="space-y-1.5">
+                      <Label htmlFor={`example-${variable}`}>
+                        {`{{${variable}}}`}
+                      </Label>
+                      <Input
+                        id={`example-${variable}`}
+                        value={form.examples?.[variable] ?? ''}
+                        onChange={(event) =>
+                          setForm({
+                            ...form,
+                            examples: {
+                              ...form.examples,
+                              [variable]: event.target.value,
+                            },
+                          })
+                        }
+                        placeholder={`Example for ${variable}`}
+                      />
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
