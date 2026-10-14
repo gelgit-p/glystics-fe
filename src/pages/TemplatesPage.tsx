@@ -65,6 +65,16 @@ import type { Template } from '@/types';
 
 const categories = ['Utility', 'Marketing', 'Authentication'];
 
+const templateStatuses = [
+  'APPROVED',
+  'PENDING',
+  'REJECTED',
+  'PAUSED',
+  'DISABLED',
+  'IN_CHALLENGE',
+  'APPEAL_REQUESTED',
+];
+
 const languages = [
   'English',
   'French',
@@ -679,6 +689,7 @@ export default function TemplatesPage() {
   const queryClient = useQueryClient();
 
   const [creating, setCreating] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('APPROVED');
 
   const [deleting, setDeleting] =
     useState<FormattedTemplate | null>(null);
@@ -910,6 +921,9 @@ const closeEditor = () => {
   const invalidVariables = detectedVariables.filter(
     (variable) => !isValidVariable(variable, parameterFormat),
   );
+  const filteredTemplates = templates.filter(
+    (template) => template.status.toUpperCase() === statusFilter,
+  );
 
   /* ------------------------------------------------------------------------ */
   /*                                  RENDER                                  */
@@ -921,11 +935,30 @@ const closeEditor = () => {
         title="Templates"
         description="Manage your WhatsApp message templates."
       >
-        <Button onClick={() => openEditor()}>
-          <Plus className="mr-2 h-4 w-4" />
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2">
+            <Label htmlFor="template-status-filter" className="whitespace-nowrap">
+              Status
+            </Label>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger id="template-status-filter" className="w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {templateStatuses.map((status) => (
+                  <SelectItem key={status} value={status}>
+                    {status.replace(/_/g, ' ')}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button onClick={() => openEditor()}>
+            <Plus className="mr-2 h-4 w-4" />
 
-          Create Template
-        </Button>
+            Create Template
+          </Button>
+        </div>
       </PageHeader>
 
       {/* Error */}
@@ -961,9 +994,15 @@ const closeEditor = () => {
             </Button>
           }
         />
+      ) : !filteredTemplates.length ? (
+        <EmptyState
+          icon={MessageSquare}
+          title={`No ${statusFilter.replace(/_/g, ' ').toLowerCase()} templates`}
+          description={`There are no templates with ${statusFilter.replace(/_/g, ' ')} status. Choose another status to see more templates.`}
+        />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {templates.map((tpl) => (
+          {filteredTemplates.map((tpl) => (
             <div
               key={tpl.id}
               className="rounded-xl border border-border bg-card p-5 transition-shadow hover:shadow-md"
