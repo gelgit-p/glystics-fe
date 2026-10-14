@@ -755,12 +755,25 @@ const closeEditor = () => {
         ? !/^\d+$/.test(variable)
         : /^\d+$/.test(variable),
     );
+    const invalidNamedVariables =
+      parameterFormat === 'NAMED'
+        ? variables.filter((variable) => !/^[a-z0-9_]+$/.test(variable))
+        : [];
 
     if (hasInvalidParameterFormat) {
       toast.error(
         parameterFormat === 'POSITIONAL'
           ? 'Positional parameters must use numeric placeholders such as {{1}}.'
           : 'Named parameters must use names such as {{customer_name}}.',
+      );
+      return;
+    }
+
+    if (invalidNamedVariables.length > 0) {
+      toast.error(
+        `Named parameters must use lowercase letters, numbers, and underscores. Rename: ${invalidNamedVariables
+          .map((variable) => `{{${variable}}}`)
+          .join(', ')}`,
       );
       return;
     }
