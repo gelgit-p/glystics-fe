@@ -126,6 +126,7 @@ interface DeliveryRecord {
   receiverAddress: string;
   deliveryStatus: string;
   createdAt: string;
+  courier_name?: string | null;
 }
 
 interface DeliveryTableRow {
@@ -157,7 +158,10 @@ const isDeliveryRecord = (
     typeof record.senderAddress === 'string' &&
     typeof record.receiverAddress === 'string' &&
     typeof record.deliveryStatus === 'string' &&
-    typeof record.createdAt === 'string'
+    typeof record.createdAt === 'string' &&
+    (record.courier_name === undefined ||
+      record.courier_name === null ||
+      typeof record.courier_name === 'string')
   );
 };
 
@@ -346,6 +350,64 @@ interface ShippingLabelResponse {
   status: string;
   message: string;
   errors?: string[];
+  data?: {
+    order_id?: string;
+    courier?: {
+      name?: string;
+      email?: string | null;
+      phone?: string | null;
+    };
+    status?: string;
+    ship_from?: {
+      name?: string;
+      phone?: string;
+      address?: string;
+      latitude?: number | null;
+      longitude?: number | null;
+    };
+    ship_to?: {
+      name?: string;
+      phone?: string;
+      address?: string;
+      latitude?: number | null;
+      longitude?: number | null;
+    };
+    payment?: {
+      shipping_fee?: number;
+      type?: string;
+      status?: string;
+    };
+    package_weight?: number;
+    package_amount?: number;
+    tracking_url?: string;
+  };
+}
+
+interface CreatedDeliveryResponse {
+  id: string;
+}
+
+interface DeliveryUpdatePayload {
+  senderName?: string;
+  senderPhone?: string;
+  senderAddress?: string;
+  senderLatitude?: string;
+  senderLongitude?: string;
+  receiverName?: string;
+  receiverPhone?: string;
+  receiverAddress?: string;
+  receiverLatitude?: string;
+  receiverLongitude?: string;
+  courier_name?: string;
+  courier_email?: string;
+  courier_phone?: string;
+  shipbubbleOrderId?: string;
+  tracking_url?: string;
+  package_amount?: string;
+  package_weight?: string;
+  shipping_fee?: string;
+  shipping_payment_type?: string;
+  shipping_payment_status?: string;
 }
 
 interface DeliveryFormState {
@@ -541,7 +603,7 @@ export default function DeliveriesPage() {
     setBookingCourierId,
   ] = useState<string | null>(null);
 
-  const [deliverySaved, setDeliverySaved] = useState(false);
+  const [deliveryId, setDeliveryId] = useState<string | null>(null);
 
   const [insuranceDialogOpen, setInsuranceDialogOpen] = useState(false);
 
@@ -641,7 +703,7 @@ export default function DeliveriesPage() {
           receiverPhone: delivery.receiverPhone,
           origin: delivery.senderAddress,
           destination: delivery.receiverAddress,
-          courier: 'Not assigned',
+          courier: delivery.courier_name || 'Not assigned',
           status: delivery.deliveryStatus
             .toLowerCase()
             .replace(/_/g, ' ')
@@ -750,7 +812,7 @@ export default function DeliveriesPage() {
 
     setBookingCourierId(null);
 
-    setDeliverySaved(false);
+    setDeliveryId(null);
 
     setInsuranceDialogOpen(false);
 
@@ -1310,7 +1372,9 @@ export default function DeliveriesPage() {
     setBookingCourierId(courierId);
 
     try {
-      if (!deliverySaved) {
+      let savedDeliveryId = deliveryId;
+
+      if (!savedDeliveryId) {
         const userId = localStorage.getItem('userId');
 
         if (!userId) {
@@ -1334,6 +1398,22 @@ export default function DeliveriesPage() {
           receiverName: formData.receiverName.trim(),
           receiverPhone: formData.receiverPhone.trim(),
           receiverAddress: formData.receiverAddress.trim(),
+          senderLatitude:
+            validatedSender?.latitude === undefined
+              ? undefined
+              : String(validatedSender.latitude),
+          senderLongitude:
+            validatedSender?.longitude === undefined
+              ? undefined
+              : String(validatedSender.longitude),
+          receiverLatitude:
+            validatedReceiver?.latitude === undefined
+              ? undefined
+              : String(validatedReceiver.latitude),
+          receiverLongitude:
+            validatedReceiver?.longitude === undefined
+              ? undefined
+              : String(validatedReceiver.longitude),
           packageName: formData.packageName.trim(),
           packageCategory: selectedCategory.category,
           packageWeight: formData.weight,
@@ -1370,7 +1450,19 @@ export default function DeliveriesPage() {
           throw new Error(message || 'Unable to save delivery details.');
         }
 
-        setDeliverySaved(true);
+        if (
+          typeof saveResult !== 'object' ||
+          saveResult === null ||
+          !('id' in saveResult) ||
+          typeof saveResult.id !== 'string'
+        ) {
+          throw new Error(
+            'Delivery was saved but the server did not return its ID.',
+          );
+        }
+
+        savedDeliveryId = (saveResult as CreatedDeliveryResponse).id;
+        setDeliveryId(savedDeliveryId);
         await queryClient.invalidateQueries({
           queryKey: ['deliveries'],
         });
@@ -1383,7 +1475,7 @@ export default function DeliveriesPage() {
         courier_id: courierId,
         insurance_code: insuranceCode,
         is_cod_label: false,
-        duties_paid: true,
+        duties_paid: false,
       };
 
       console.log('Booking couriers:', selectedCourier);
@@ -1417,8 +1509,118 @@ export default function DeliveriesPage() {
         );
       }
 
+      if (!savedDeliveryId) {
+        throw new Error(
+          'Shipment was booked but its delivery record could not be identified.',
+        );
+      }
+
+      const shipment = result.data;
+      if (!shipment?.order_id) {
+        throw new Error(
+          'Shipment was booked but the response did not include an order ID.',
+        );
+      }
+
+      const deliveryUpdatePayload: DeliveryUpdatePayload = {
+        senderName:
+          shipment.ship_from?.name ?? formData.senderName.trim(),
+        senderPhone:
+          shipment.ship_from?.phone ?? formData.senderPhone.trim(),
+        senderAddress:
+          shipment.ship_from?.address ?? formData.senderAddress.trim(),
+        senderLatitude:
+          shipment.ship_from?.latitude == null
+            ? validatedSender?.latitude === undefined
+              ? undefined
+              : String(validatedSender.latitude)
+            : String(shipment.ship_from.latitude),
+        senderLongitude:
+          shipment.ship_from?.longitude == null
+            ? validatedSender?.longitude === undefined
+              ? undefined
+              : String(validatedSender.longitude)
+            : String(shipment.ship_from.longitude),
+        receiverName:
+          shipment.ship_to?.name ?? formData.receiverName.trim(),
+        receiverPhone:
+          shipment.ship_to?.phone ?? formData.receiverPhone.trim(),
+        receiverAddress:
+          shipment.ship_to?.address ?? formData.receiverAddress.trim(),
+        receiverLatitude:
+          shipment.ship_to?.latitude == null
+            ? validatedReceiver?.latitude === undefined
+              ? undefined
+              : String(validatedReceiver.latitude)
+            : String(shipment.ship_to.latitude),
+        receiverLongitude:
+          shipment.ship_to?.longitude == null
+            ? validatedReceiver?.longitude === undefined
+              ? undefined
+              : String(validatedReceiver.longitude)
+            : String(shipment.ship_to.longitude),
+        courier_name: shipment.courier?.name ?? selectedCourier.courier_name,
+        courier_email: shipment.courier?.email ?? undefined,
+        courier_phone: shipment.courier?.phone ?? undefined,
+        shipbubbleOrderId: shipment.order_id,
+        tracking_url: shipment.tracking_url,
+        package_amount:
+          shipment.package_amount === undefined
+            ? undefined
+            : String(shipment.package_amount),
+        package_weight:
+          shipment.package_weight === undefined
+            ? undefined
+            : String(shipment.package_weight),
+        shipping_fee:
+          shipment.payment?.shipping_fee === undefined
+            ? undefined
+            : String(shipment.payment.shipping_fee),
+        shipping_payment_type: shipment.payment?.type,
+        shipping_payment_status: shipment.payment?.status,
+      };
+
       setInsuranceDialogOpen(false);
       handleDialogChange(false);
+
+      let updateResponse: Response;
+      try {
+        updateResponse = await fetch(
+          `${import.meta.env.VITE_API_URL}/delivery/${encodeURIComponent(savedDeliveryId)}`,
+          {
+            method: 'PATCH',
+            headers: {
+              accept: '*/*',
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(deliveryUpdatePayload),
+          },
+        );
+      } catch (error) {
+        throw new Error(
+          `Shipment booked, but delivery details could not be saved: ${
+            error instanceof Error ? error.message : 'Network request failed.'
+          }`,
+        );
+      }
+
+      const updateResult = await updateResponse.json().catch(() => {
+        throw new Error(
+          'Shipment booked, but the response while saving delivery details was invalid.',
+        );
+      });
+
+      if (!updateResponse.ok) {
+        const message = Array.isArray(updateResult?.message)
+          ? updateResult.message.join(', ')
+          : updateResult?.message;
+
+        throw new Error(
+          `Shipment booked, but delivery details could not be saved: ${
+            message || 'The delivery update request failed.'
+          }`,
+        );
+      }
 
       toast.success(
         `Delivery booked successfully with ${selectedCourier.courier_name}.`,
