@@ -342,16 +342,6 @@ interface InsuranceRatesResponse {
   data: InsuranceRate[];
 }
 
-interface LandedCostResponse {
-  status: string;
-  message: string;
-  errors?: string[];
-  data?: {
-    currency: string;
-    amount: number;
-  };
-}
-
 interface ShippingLabelResponse {
   status: string;
   message: string;
@@ -1387,51 +1377,6 @@ export default function DeliveriesPage() {
         toast.success('Delivery details saved.');
       }
 
-      const checkoutCurrency = rates.checkout_data.currency.trim();
-
-      if (!checkoutCurrency) {
-        throw new Error('Checkout currency is missing from delivery rates.');
-      }
-
-      const landedCostUrl = new URL(
-        `${import.meta.env.VITE_API_URL}/shipping/landed-cost`,
-      );
-      landedCostUrl.searchParams.set('request_token', rates.request_token);
-      landedCostUrl.searchParams.set(
-        'store_checkout_currency',
-        checkoutCurrency,
-      );
-
-      const landedCostResponse = await fetch(landedCostUrl, {
-        method: 'GET',
-        headers: { accept: '*/*' },
-      });
-
-      const landedCost = (await landedCostResponse.json().catch(() => {
-        throw new Error(
-          'Invalid response received while calculating duties.',
-        );
-      })) as LandedCostResponse;
-
-      if (
-        !landedCostResponse.ok ||
-        landedCost.status !== 'success' ||
-        !landedCost.data
-      ) {
-        throw new Error(
-          landedCost.errors?.join(', ') ||
-            landedCost.message ||
-            'Unable to calculate duties for this shipment.',
-        );
-      }
-
-      toast.info(
-        `Duties calculated: ${new Intl.NumberFormat('en-NG', {
-          style: 'currency',
-          currency: landedCost.data.currency,
-        }).format(landedCost.data.amount)}.`,
-      );
-
       const payload = {
         request_token: rates.request_token,
         service_code: selectedCourier.service_code,
@@ -1472,6 +1417,9 @@ export default function DeliveriesPage() {
         );
       }
 
+      setInsuranceDialogOpen(false);
+      handleDialogChange(false);
+
       toast.success(
         `Delivery booked successfully with ${selectedCourier.courier_name}.`,
       );
@@ -1481,9 +1429,6 @@ export default function DeliveriesPage() {
         queryKey: ['deliveries'],
       });
 
-      // Close dialog and reset form.
-      setInsuranceDialogOpen(false);
-      handleDialogChange(false);
     } catch (error) {
       console.error('Delivery booking error:', error);
 
