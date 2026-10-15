@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -346,68 +346,11 @@ interface InsuranceRatesResponse {
   data: InsuranceRate[];
 }
 
-interface ShippingLabelResponse {
-  status: string;
-  message: string;
-  errors?: string[];
-  data?: {
-    order_id?: string;
-    courier?: {
-      name?: string;
-      email?: string | null;
-      phone?: string | null;
-    };
-    status?: string;
-    ship_from?: {
-      name?: string;
-      phone?: string;
-      address?: string;
-      latitude?: number | null;
-      longitude?: number | null;
-    };
-    ship_to?: {
-      name?: string;
-      phone?: string;
-      address?: string;
-      latitude?: number | null;
-      longitude?: number | null;
-    };
-    payment?: {
-      shipping_fee?: number;
-      type?: string;
-      status?: string;
-    };
-    package_weight?: number;
-    package_amount?: number;
-    tracking_url?: string;
-  };
-}
-
-interface CreatedDeliveryResponse {
-  id: string;
-}
-
-interface DeliveryUpdatePayload {
-  senderName?: string;
-  senderPhone?: string;
-  senderAddress?: string;
-  senderLatitude?: string;
-  senderLongitude?: string;
-  receiverName?: string;
-  receiverPhone?: string;
-  receiverAddress?: string;
-  receiverLatitude?: string;
-  receiverLongitude?: string;
-  courier_name?: string;
-  courier_email?: string;
-  courier_phone?: string;
-  shipbubbleOrderId?: string;
-  tracking_url?: string;
-  package_amount?: string;
-  package_weight?: string;
-  shipping_fee?: string;
-  shipping_payment_type?: string;
-  shipping_payment_status?: string;
+interface CheckoutDeliveryStatus {
+  paymentStatus: string;
+  deliveryStatus: string | null;
+  shipbubbleOrderId: string | null;
+  bookingError: string | null;
 }
 
 interface DeliveryFormState {
@@ -604,6 +547,9 @@ export default function DeliveriesPage() {
   ] = useState<string | null>(null);
 
   const [deliveryId, setDeliveryId] = useState<string | null>(null);
+  const [checkoutDialogOpen, setCheckoutDialogOpen] = useState(false);
+  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
+  const [checkoutTrackingId, setCheckoutTrackingId] = useState<string | null>(null);
 
   const [insuranceDialogOpen, setInsuranceDialogOpen] = useState(false);
 
@@ -628,6 +574,64 @@ export default function DeliveriesPage() {
 
   const [rates, setRates] =
     useState<RatesData | null>(null);
+
+  const checkoutStatusQuery = useQuery<CheckoutDeliveryStatus>({
+    queryKey: ['delivery-checkout-status', checkoutTrackingId],
+    enabled: Boolean(checkoutTrackingId),
+    queryFn: async () => {
+      if (!checkoutTrackingId) {
+        throw new Error('Delivery tracking ID is missing.');
+      }
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/delivery/tracking/${encodeURIComponent(checkoutTrackingId)}`,
+        { headers: { accept: '*/*' } },
+      );
+      const result: unknown = await response.json();
+      if (!response.ok) {
+        throw new Error('Unable to check delivery payment status.');
+      }
+      if (
+        typeof result !== 'object' ||
+        result === null ||
+        !('paymentStatus' in result) ||
+        typeof result.paymentStatus !== 'string' ||
+        !('deliveryStatus' in result) ||
+        (result.deliveryStatus !== null &&
+          typeof result.deliveryStatus !== 'string') ||
+        !('shipbubbleOrderId' in result) ||
+        (result.shipbubbleOrderId !== null &&
+          typeof result.shipbubbleOrderId !== 'string') ||
+        !('bookingError' in result) ||
+        (result.bookingError !== null &&
+          typeof result.bookingError !== 'string')
+      ) {
+        throw new Error('Invalid delivery payment status received.');
+      }
+      return result as CheckoutDeliveryStatus;
+    },
+    refetchInterval: checkoutTrackingId ? 5000 : false,
+  });
+
+  useEffect(() => {
+    const status = checkoutStatusQuery.data;
+    if (status?.paymentStatus === 'PAID' && status.shipbubbleOrderId) {
+      setCheckoutDialogOpen(false);
+      setCheckoutUrl(null);
+      setCheckoutTrackingId(null);
+      toast.success('Payment received and courier booking confirmed.');
+      void queryClient.invalidateQueries({ queryKey: ['deliveries'] });
+    } else if (status?.paymentStatus === 'BOOKING_FAILED') {
+      toast.error(
+        status.bookingError ??
+          'Payment succeeded, but courier booking needs attention.',
+      );
+    }
+  }, [
+    checkoutStatusQuery.data?.paymentStatus,
+    checkoutStatusQuery.data?.shipbubbleOrderId,
+    checkoutStatusQuery.data?.bookingError,
+    queryClient,
+  ]);
 
   const [
     validatedSender,
@@ -813,6 +817,10 @@ export default function DeliveriesPage() {
     setBookingCourierId(null);
 
     setDeliveryId(null);
+
+    setCheckoutDialogOpen(false);
+    setCheckoutUrl(null);
+    setCheckoutTrackingId(null);
 
     setInsuranceDialogOpen(false);
 
@@ -1363,9 +1371,19 @@ export default function DeliveriesPage() {
       return;
     }
 
-    const courierId = String(selectedCourier.courier_id);
-
     if (bookingCourierId !== null) {
+      return;
+    }
+
+    if (!Number.isFinite(selectedCourier.total) || selectedCourier.total <= 0) {
+      toast.error('The selected courier rate is invalid.');
+      return;
+    }
+
+    const courierId = String(selectedCourier.courier_id);
+    const currency = selectedCourier.currency || rates.checkout_data.currency;
+    if (!currency) {
+      toast.error('The selected courier rate currency is missing.');
       return;
     }
 
@@ -1373,11 +1391,11 @@ export default function DeliveriesPage() {
 
     try {
       let savedDeliveryId = deliveryId;
+      let trackingId = checkoutTrackingId;
 
       if (!savedDeliveryId) {
-        const userId = localStorage.getItem('userId');
-
-        if (!userId) {
+        const currentUserId = localStorage.getItem('userId');
+        if (!currentUserId) {
           throw new Error('Logged-in user ID not found.');
         }
 
@@ -1385,14 +1403,13 @@ export default function DeliveriesPage() {
           (category) =>
             category.category_id === Number(formData.categoryId),
         );
-
         if (!selectedCategory) {
           throw new Error('Selected package category was not found.');
         }
 
         const deliveryPayload = {
           senderName: formData.senderName.trim(),
-          userId,
+          userId: currentUserId,
           senderPhone: formData.senderPhone.trim(),
           senderAddress: formData.senderAddress.trim(),
           receiverName: formData.receiverName.trim(),
@@ -1436,209 +1453,97 @@ export default function DeliveriesPage() {
             body: JSON.stringify(deliveryPayload),
           },
         );
-
-        const saveResult = await saveResponse.json().catch(() => {
-          throw new Error(
-            'Invalid response received while saving delivery details.',
-          );
-        });
-
+        const saveResult: unknown = await saveResponse.json().catch(() => null);
         if (!saveResponse.ok) {
-          const message = Array.isArray(saveResult?.message)
-            ? saveResult.message.join(', ')
-            : saveResult?.message;
-
-          throw new Error(message || 'Unable to save delivery details.');
+          const message =
+            typeof saveResult === 'object' && saveResult !== null && 'message' in saveResult
+              ? saveResult.message
+              : undefined;
+          throw new Error(
+            Array.isArray(message)
+              ? message.join(', ')
+              : typeof message === 'string'
+                ? message
+                : 'Unable to save delivery details.',
+          );
         }
-
         if (
           typeof saveResult !== 'object' ||
           saveResult === null ||
           !('id' in saveResult) ||
-          typeof saveResult.id !== 'string'
+          typeof saveResult.id !== 'string' ||
+          !('trackingId' in saveResult) ||
+          typeof saveResult.trackingId !== 'string'
         ) {
           throw new Error(
-            'Delivery was saved but the server did not return its ID.',
+            'Delivery was saved but the server did not return its ID and tracking ID.',
           );
         }
 
-        savedDeliveryId = (saveResult as CreatedDeliveryResponse).id;
+        savedDeliveryId = saveResult.id;
+        trackingId = saveResult.trackingId;
         setDeliveryId(savedDeliveryId);
-        await queryClient.invalidateQueries({
-          queryKey: ['deliveries'],
-        });
-        toast.success('Delivery details saved.');
+        setCheckoutTrackingId(trackingId);
+        await queryClient.invalidateQueries({ queryKey: ['deliveries'] });
       }
 
-      const payload = {
-        request_token: rates.request_token,
-        service_code: selectedCourier.service_code,
-        courier_id: courierId,
-        insurance_code: insuranceCode,
-        is_cod_label: false,
-        duties_paid: false,
-      };
+      if (!savedDeliveryId || !trackingId) {
+        throw new Error('Delivery ID or tracking ID is missing.');
+      }
 
-      console.log('Booking couriers:', selectedCourier);
-      console.log('Shipping label payload:', payload);
-
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/shipping/labels`,
+      const checkoutResponse = await fetch(
+        `${import.meta.env.VITE_API_URL}/delivery/${encodeURIComponent(savedDeliveryId)}/checkout-session`,
         {
           method: 'POST',
           headers: {
             accept: '*/*',
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(payload),
+          body: JSON.stringify({
+            amount: String(selectedCourier.total),
+            currency,
+            request_token: rates.request_token,
+            courier_id: courierId,
+            service_code: selectedCourier.service_code,
+            insurance_code: insuranceCode || undefined,
+          }),
         },
       );
-
-      const result = (await response.json().catch(() => {
+      const checkoutResult: unknown = await checkoutResponse.json().catch(() => null);
+      if (!checkoutResponse.ok) {
+        const message =
+          typeof checkoutResult === 'object' && checkoutResult !== null && 'message' in checkoutResult
+            ? checkoutResult.message
+            : undefined;
         throw new Error(
-          'Invalid response received while creating shipping label.',
-        );
-      })) as ShippingLabelResponse;
-
-      console.log('Shipping label response:', result);
-
-      if (!response.ok || result.status !== 'success') {
-        throw new Error(
-          result.errors?.join(', ') ||
-            result.message ||
-            'Unable to create shipping label.',
+          typeof message === 'string'
+            ? message
+            : 'Unable to create payment checkout session.',
         );
       }
-
-      if (!savedDeliveryId) {
-        throw new Error(
-          'Shipment was booked but its delivery record could not be identified.',
-        );
+      if (
+        typeof checkoutResult !== 'object' ||
+        checkoutResult === null ||
+        !('checkout_id' in checkoutResult) ||
+        typeof checkoutResult.checkout_id !== 'string' ||
+        !('checkout_url' in checkoutResult) ||
+        typeof checkoutResult.checkout_url !== 'string'
+      ) {
+        throw new Error('The checkout response did not include a payment URL.');
       }
 
-      const shipment = result.data;
-      if (!shipment?.order_id) {
-        throw new Error(
-          'Shipment was booked but the response did not include an order ID.',
-        );
-      }
-
-      const deliveryUpdatePayload: DeliveryUpdatePayload = {
-        senderName:
-          shipment.ship_from?.name ?? formData.senderName.trim(),
-        senderPhone:
-          shipment.ship_from?.phone ?? formData.senderPhone.trim(),
-        senderAddress:
-          shipment.ship_from?.address ?? formData.senderAddress.trim(),
-        senderLatitude:
-          shipment.ship_from?.latitude == null
-            ? validatedSender?.latitude === undefined
-              ? undefined
-              : String(validatedSender.latitude)
-            : String(shipment.ship_from.latitude),
-        senderLongitude:
-          shipment.ship_from?.longitude == null
-            ? validatedSender?.longitude === undefined
-              ? undefined
-              : String(validatedSender.longitude)
-            : String(shipment.ship_from.longitude),
-        receiverName:
-          shipment.ship_to?.name ?? formData.receiverName.trim(),
-        receiverPhone:
-          shipment.ship_to?.phone ?? formData.receiverPhone.trim(),
-        receiverAddress:
-          shipment.ship_to?.address ?? formData.receiverAddress.trim(),
-        receiverLatitude:
-          shipment.ship_to?.latitude == null
-            ? validatedReceiver?.latitude === undefined
-              ? undefined
-              : String(validatedReceiver.latitude)
-            : String(shipment.ship_to.latitude),
-        receiverLongitude:
-          shipment.ship_to?.longitude == null
-            ? validatedReceiver?.longitude === undefined
-              ? undefined
-              : String(validatedReceiver.longitude)
-            : String(shipment.ship_to.longitude),
-        courier_name: shipment.courier?.name ?? selectedCourier.courier_name,
-        courier_email: shipment.courier?.email ?? undefined,
-        courier_phone: shipment.courier?.phone ?? undefined,
-        shipbubbleOrderId: shipment.order_id,
-        tracking_url: shipment.tracking_url,
-        package_amount:
-          shipment.package_amount === undefined
-            ? undefined
-            : String(shipment.package_amount),
-        package_weight:
-          shipment.package_weight === undefined
-            ? undefined
-            : String(shipment.package_weight),
-        shipping_fee:
-          shipment.payment?.shipping_fee === undefined
-            ? undefined
-            : String(shipment.payment.shipping_fee),
-        shipping_payment_type: shipment.payment?.type,
-        shipping_payment_status: shipment.payment?.status,
-      };
-
+      setCheckoutUrl(checkoutResult.checkout_url);
+      setCheckoutTrackingId(trackingId);
       setInsuranceDialogOpen(false);
-      handleDialogChange(false);
-
-      let updateResponse: Response;
-      try {
-        updateResponse = await fetch(
-          `${import.meta.env.VITE_API_URL}/delivery/${encodeURIComponent(savedDeliveryId)}`,
-          {
-            method: 'PATCH',
-            headers: {
-              accept: '*/*',
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(deliveryUpdatePayload),
-          },
-        );
-      } catch (error) {
-        throw new Error(
-          `Shipment booked, but delivery details could not be saved: ${
-            error instanceof Error ? error.message : 'Network request failed.'
-          }`,
-        );
-      }
-
-      const updateResult = await updateResponse.json().catch(() => {
-        throw new Error(
-          'Shipment booked, but the response while saving delivery details was invalid.',
-        );
-      });
-
-      if (!updateResponse.ok) {
-        const message = Array.isArray(updateResult?.message)
-          ? updateResult.message.join(', ')
-          : updateResult?.message;
-
-        throw new Error(
-          `Shipment booked, but delivery details could not be saved: ${
-            message || 'The delivery update request failed.'
-          }`,
-        );
-      }
-
-      toast.success(
-        `Delivery booked successfully with ${selectedCourier.courier_name}.`,
-      );
-
-      // Refresh the deliveries list.
-      await queryClient.invalidateQueries({
-        queryKey: ['deliveries'],
-      });
-
+      setCheckoutDialogOpen(true);
+      setCreateOpen(false);
+      toast.success('Checkout ready. Complete payment to book your courier.');
     } catch (error) {
-      console.error('Delivery booking error:', error);
-
+      console.error('Delivery checkout error:', error);
       toast.error(
         error instanceof Error
           ? error.message
-          : 'Unable to book selected courier.',
+          : 'Unable to create checkout session.',
       );
     } finally {
       setBookingCourierId(null);
@@ -3009,6 +2914,65 @@ export default function DeliveriesPage() {
               >
                 Continue to booking
               </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog
+          open={checkoutDialogOpen}
+          onOpenChange={setCheckoutDialogOpen}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Complete delivery payment</DialogTitle>
+              <DialogDescription>
+                Pay for the selected courier service. The shipment label will
+                be created automatically after Bachs confirms payment.
+              </DialogDescription>
+            </DialogHeader>
+
+            {checkoutUrl && (
+              <a
+                href={checkoutUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="break-all rounded-md border p-3 text-sm text-primary underline"
+              >
+                {checkoutUrl}
+              </a>
+            )}
+
+            <div aria-live="polite" className="text-sm text-muted-foreground">
+              {checkoutStatusQuery.data?.paymentStatus === 'BOOKING_FAILED'
+                ? checkoutStatusQuery.data.bookingError ??
+                  'Payment was received, but courier booking failed. Please contact support.'
+                : checkoutStatusQuery.data?.paymentStatus === 'PROCESSING'
+                  ? 'Payment confirmed. Booking the courier...'
+                  : checkoutStatusQuery.data?.paymentStatus === 'PAID'
+                    ? 'Payment confirmed. Finalizing courier booking...'
+                    : checkoutStatusQuery.isError
+                      ? 'Unable to refresh payment status. The webhook will still process payment.'
+                      : 'Waiting for payment confirmation...'}
+            </div>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setCheckoutDialogOpen(false)}
+              >
+                Close
+              </Button>
+              {checkoutUrl && (
+                <Button asChild>
+                  <a
+                    href={checkoutUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Continue to payment
+                  </a>
+                </Button>
+              )}
             </DialogFooter>
           </DialogContent>
         </Dialog>
