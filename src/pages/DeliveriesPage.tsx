@@ -1420,6 +1420,7 @@ export default function DeliveriesPage() {
           packageDimensions: `${formData.length || '0'}x${formData.width || '0'}x${formData.height || '0'}`,
           packageValue: formData.amount,
           pickupDate: formData.pickupDate,
+          deliveryStatus: 'CREATED',
           deliveryType: formData.serviceType,
           deliveryInstructions: formData.instructions.trim(),
         };
