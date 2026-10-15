@@ -69,7 +69,6 @@ const templateStatuses = [
   'ALL',
   'APPROVED',
   'PENDING',
-  'IN_REVIEW',
   'REJECTED',
   'PAUSED',
   'DISABLED',
