@@ -329,11 +329,12 @@ function formatTemplate(template: MetaTemplate): FormattedTemplate {
  * Equivalent curl:
  *
  * curl -X GET \
- *   'https://glystics.onrender.com/whatsapp/message-templates' \
+ *   'https://glystics.onrender.com/whatsapp/message-templates/{userId}?status=APPROVED' \
  *   -H 'accept: * / *'
  */
 async function fetchMessageTemplates(
   userId: string,
+  status = 'APPROVED',
 ): Promise<FormattedTemplate[]> {
   if (!userId) {
     throw new Error(
@@ -341,8 +342,9 @@ async function fetchMessageTemplates(
     );
   }
 
+  const query = new URLSearchParams({ status });
   const response = await fetch(
-    `${import.meta.env.VITE_API_URL}/whatsapp/message-templates/${encodeURIComponent(userId)}`,
+    `${import.meta.env.VITE_API_URL}/whatsapp/message-templates/${encodeURIComponent(userId)}?${query}`,
     {
       method: 'GET',
       headers: {
@@ -721,7 +723,7 @@ const {
       throw new Error('Logged-in user ID not found');
     }
 
-    return fetchMessageTemplates(userId);
+    return fetchMessageTemplates(userId, statusFilter);
   },
 
   enabled: Boolean(userId),
