@@ -66,6 +66,7 @@ import type { Template } from '@/types';
 const categories = ['Utility', 'Marketing', 'Authentication'];
 
 const templateStatuses = [
+  'ALL',
   'APPROVED',
   'PENDING',
   'REJECTED',
@@ -326,10 +327,10 @@ function formatTemplate(template: MetaTemplate): FormattedTemplate {
 /* -------------------------------------------------------------------------- */
 
 /**
- * Equivalent curl:
+ * Equivalent curl (all templates):
  *
  * curl -X GET \
- *   'https://glystics.onrender.com/whatsapp/message-templates/{userId}?status=APPROVED' \
+ *   'https://glystics.onrender.com/whatsapp/message-templates/{userId}/all' \
  *   -H 'accept: * / *'
  */
 async function fetchMessageTemplates(
@@ -342,9 +343,12 @@ async function fetchMessageTemplates(
     );
   }
 
-  const query = new URLSearchParams({ status });
+  const endpoint =
+    status === 'ALL'
+      ? `${import.meta.env.VITE_API_URL}/whatsapp/message-templates/${encodeURIComponent(userId)}/all`
+      : `${import.meta.env.VITE_API_URL}/whatsapp/message-templates/${encodeURIComponent(userId)}?${new URLSearchParams({ status })}`;
   const response = await fetch(
-    `${import.meta.env.VITE_API_URL}/whatsapp/message-templates/${encodeURIComponent(userId)}?${query}`,
+    endpoint,
     {
       method: 'GET',
       headers: {
@@ -925,7 +929,9 @@ const closeEditor = () => {
     (variable) => !isValidVariable(variable, parameterFormat),
   );
   const filteredTemplates = templates.filter(
-    (template) => template.status.toUpperCase() === statusFilter,
+    (template) =>
+      statusFilter === 'ALL' ||
+      template.status.toUpperCase() === statusFilter,
   );
 
   /* ------------------------------------------------------------------------ */
