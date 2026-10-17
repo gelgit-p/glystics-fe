@@ -51,13 +51,16 @@ const triggerValues = [
   'Confirmed',
   'Picked Up',
   'In Transit',
-  'Out for Delivery',
-  'Rider Assigned',
-  'Pickup Scheduled',
-  'Delivered',
-  'Failed',
+  'Completed',
   'Cancelled',
 ];
+
+interface WhatsAppTemplateOption {
+  id: string;
+  name: string;
+  language: string;
+  status: string;
+}
 
 function timeAgo(date: string | null): string {
   if (!date) return 'Never';
@@ -126,8 +129,8 @@ export default function AutomationsPage() {
     data: messageTemplates = [],
     isLoading: isLoadingTemplates,
     isError: isTemplatesError,
-  } = useQuery<string[]>({
-    queryKey: ['whatsapp-message-template-names', userId],
+  } = useQuery<WhatsAppTemplateOption[]>({
+    queryKey: ['whatsapp-message-templates', userId],
     queryFn: async () => {
       if (!userId) {
         throw new Error('Logged-in user ID not found');
@@ -147,19 +150,52 @@ export default function AutomationsPage() {
         );
       }
 
-      const result: { data?: { name: string }[] } = await response.json();
-      return Array.isArray(result.data)
-        ? result.data.map((template) => template.name)
-        : [];
+      const result: unknown = await response.json();
+      if (
+        typeof result !== 'object' ||
+        result === null ||
+        !('data' in result) ||
+        !Array.isArray(result.data)
+      ) {
+        throw new Error('Invalid WhatsApp templates response.');
+      }
+      return result.data.flatMap((value): WhatsAppTemplateOption[] => {
+        if (
+          typeof value !== 'object' ||
+          value === null ||
+          !('id' in value) ||
+          typeof value.id !== 'string' ||
+          !('name' in value) ||
+          typeof value.name !== 'string' ||
+          !('language' in value) ||
+          typeof value.language !== 'string' ||
+          !('status' in value) ||
+          value.status !== 'APPROVED'
+        ) {
+          return [];
+        }
+        return [{
+          id: value.id,
+          name: value.name,
+          language: value.language,
+          status: value.status,
+        }];
+      });
     },
-    enabled: Boolean(userId),
+    enabled: Boolean(userId && (creating || editing)),
     staleTime: 30_000,
     refetchOnWindowFocus: false,
   });
 
   const openCreate = () => {
     setCreating(true);
-    setForm({ trigger: 'Shipment status changes', triggerValue: 'Out for Delivery', action: 'Send WhatsApp template', actionTemplate: messageTemplates[0] ?? '', name: '' });
+    setForm({
+      trigger: 'Shipment status changes',
+      triggerValue: 'Out for Delivery',
+      action: '',
+      actionTemplate: '',
+      name: '',
+    });
   };
 
   const openEdit = (auto: Automation) => {
@@ -199,6 +235,17 @@ const handleSave = async () => {
     return;
   }
 
+  const selectedTemplate = messageTemplates.find(
+    (template) =>
+      template.id === form.actionTemplate ||
+      (editing?.action === 'Send WhatsApp template' &&
+        template.name === form.actionTemplate),
+  );
+  if (!selectedTemplate) {
+    toast.error('Select an approved WhatsApp template.');
+    return;
+  }
+
   setSaving(true);
 
   try {
@@ -210,8 +257,8 @@ const handleSave = async () => {
         form.trigger === 'Shipment status changes'
           ? form.triggerValue
           : null,
-      action: 'Send WhatsApp template',
-      actionTemplate: form.actionTemplate,
+      action: selectedTemplate.name,
+      actionTemplate: selectedTemplate.id,
       enabled: editing?.enabled ?? true,
     };
 
@@ -370,7 +417,7 @@ const handleSave = async () => {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">THEN</span>
-                  <span className="text-sm">{auto.action}</span>
+                  <span className="text-sm">Send WhatsApp template: {auto.action}</span>
                 </div>
                 <div className="flex items-center gap-2 pl-4">
                   <ArrowDown className="h-3 w-3 text-muted-foreground" />
@@ -455,10 +502,35 @@ const handleSave = async () => {
               </div>
               <div className="space-y-3">
                 <div className="text-sm font-medium">Send WhatsApp template</div>
-                <Select value={form.actionTemplate} onValueChange={(v) => setForm({ ...form, actionTemplate: v })}>
+                <Select
+                  value={
+                    messageTemplates.find(
+                      (template) =>
+                        template.id === form.actionTemplate ||
+                        (editing?.action === 'Send WhatsApp template' &&
+                          template.name === form.actionTemplate),
+                    )?.id
+                  }
+                  onValueChange={(id) => {
+                    const template = messageTemplates.find(
+                      (option) => option.id === id,
+                    );
+                    if (template) {
+                      setForm({
+                        ...form,
+                        action: template.name,
+                        actionTemplate: template.id,
+                      });
+                    }
+                  }}
+                >
                   <SelectTrigger><SelectValue placeholder="Select template" /></SelectTrigger>
                   <SelectContent>
-                    {messageTemplates.map((name) => <SelectItem key={name} value={name}>{name}</SelectItem>)}
+                    {messageTemplates.map((template) => (
+                      <SelectItem key={template.id} value={template.id}>
+                        {template.name} ({template.language})
+                      </SelectItem>
+                    ))}
                     {isLoadingTemplates && <SelectItem value="loading" disabled>Loading templates...</SelectItem>}
                     {isTemplatesError && <SelectItem value="error" disabled>Failed to load templates</SelectItem>}
                     {!userId && <SelectItem value="no-user" disabled>Log in to load templates</SelectItem>}
