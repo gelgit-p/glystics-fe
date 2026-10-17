@@ -1367,12 +1367,14 @@ export default function DeliveriesPage() {
         courierInsuranceCode.toLowerCase() !== 'not available'
         ? courierInsuranceCode
         : '',
+      undefined,
     );
   };
 
   const completeCourierBooking = async (
     selectedCourier: Courier,
     insuranceCode: string,
+    selectedInsurance?: InsuranceRate,
   ) => {
     if (!rates?.request_token) {
       toast.error('Shipping request token is missing.');
@@ -1508,12 +1510,18 @@ export default function DeliveriesPage() {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            amount: String(selectedCourier.total),
+            amount: selectedCourier.total.toFixed(2),
             currency,
             request_token: rates.request_token,
             courier_id: courierId,
             service_code: selectedCourier.service_code,
             insurance_code: insuranceCode || undefined,
+            insuranceAmount: selectedInsurance?.amount ?? 0,
+            insuranceCurrency: selectedInsurance?.currency,
+            insurance_policy_condition:
+              selectedInsurance?.policy_condition,
+            insure_percentage: selectedInsurance?.insure_percentage,
+            insurerName: selectedInsurance?.insurer,
           }),
         },
       );
@@ -1568,6 +1576,9 @@ export default function DeliveriesPage() {
     void completeCourierBooking(
       pendingCourier,
       selectedInsuranceCode,
+      insuranceOptions.find(
+        (option) => option.code === selectedInsuranceCode,
+      ),
     );
   };
 
