@@ -91,7 +91,7 @@ export interface Automation {
   name: string;
   enabled: boolean;
   trigger: string;
-  triggerValue: string;
+  triggerValue: string | null;
   condition: string;
   action: string;
   actionTemplate: string;

@@ -8,8 +8,7 @@ import {
   Trash2,
   Pencil,
 } from 'lucide-react';
-import { api } from '@/lib/api';
-import { PageHeader, LoadingState, EmptyState } from '@/components/shared';
+import { PageHeader, LoadingState, EmptyState, ErrorState } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -42,14 +41,23 @@ import { cn } from '@/lib/utils';
 import type { Automation } from '@/types';
 
 const triggers = [
+  { value: 'Shipment label created', label: 'Shipment label created' },
   { value: 'Shipment status changes', label: 'Shipment status changes' },
-  { value: 'Delivery fails', label: 'Delivery fails' },
-  { value: 'Package is delivered', label: 'Package is delivered' },
-  { value: 'Rider assigned', label: 'Rider is assigned' },
-  { value: 'Pickup scheduled', label: 'Pickup is scheduled' },
+  { value: 'Shipment cancelled', label: 'Shipment cancelled' },
 ];
 
-const triggerValues = ['pending', 'confirmed', 'picked_up', 'in_transit', 'Rider Assigned', 'completed', 'cancelled'];
+const triggerValues = [
+  'Pending',
+  'Confirmed',
+  'Picked Up',
+  'In Transit',
+  'Out for Delivery',
+  'Rider Assigned',
+  'Pickup Scheduled',
+  'Delivered',
+  'Failed',
+  'Cancelled',
+];
 
 function timeAgo(date: string | null): string {
   if (!date) return 'Never';
@@ -71,16 +79,10 @@ export default function AutomationsPage() {
   const [form, setForm] = useState<Partial<Automation>>({});
   const userId = localStorage.getItem('userId') ?? '';
 
-  // const { data: automations, isLoading } = useQuery({
-  //   queryKey: ['automations'],
-  //   queryFn: () => api.getAutomations(),
-  // });
-
   const {
   data: automations = [],
   isLoading,
   isError: isAutomationsError,
-  error: automationsError,
 } = useQuery<Automation[]>({
   queryKey: ['automations', userId],
 
@@ -132,7 +134,7 @@ export default function AutomationsPage() {
       }
 
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/whatsapp/message-templates/${encodeURIComponent(userId)}`,
+        `${import.meta.env.VITE_API_URL}/whatsapp/message-templates/${encodeURIComponent(userId)}?status=APPROVED`,
         {
           method: 'GET',
           headers: { accept: '*/*' },
@@ -187,7 +189,7 @@ const handleSave = async () => {
     return;
   }
 
-  if (!form.triggerValue) {
+  if (form.trigger === 'Shipment status changes' && !form.triggerValue) {
     toast.error('Trigger status is required');
     return;
   }
@@ -204,16 +206,34 @@ const handleSave = async () => {
       userId,
       name: form.name.trim(),
       trigger: form.trigger,
-      triggerValue: form.triggerValue,
+      triggerValue:
+        form.trigger === 'Shipment status changes'
+          ? form.triggerValue
+          : null,
       action: 'Send WhatsApp template',
       actionTemplate: form.actionTemplate,
-      enabled: true,
+      enabled: editing?.enabled ?? true,
     };
 
     if (editing) {
-      // Replace with update endpoint when available.
-      await api.createAutomation(payload);
-
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/automations/${encodeURIComponent(editing.id)}?userId=${encodeURIComponent(userId)}`,
+        {
+          method: 'PUT',
+          headers: {
+            accept: '*/*',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        },
+      );
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(
+          errorData?.message ||
+            `Failed to update automation: ${response.status} ${response.statusText}`,
+        );
+      }
       toast.success('Automation updated');
     } else {
       const response = await fetch(
@@ -261,13 +281,35 @@ const handleSave = async () => {
 };
 
   const handleToggle = async (id: string) => {
-    await api.toggleAutomation(id);
+    if (!userId) {
+      toast.error('Logged-in user ID not found');
+      return;
+    }
+    const response = await fetch(
+      `${import.meta.env.VITE_API_URL}/automations/${encodeURIComponent(id)}/toggle?userId=${encodeURIComponent(userId)}`,
+      { method: 'PATCH', headers: { accept: '*/*' } },
+    );
+    if (!response.ok) {
+      toast.error('Failed to update automation status');
+      return;
+    }
     queryClient.invalidateQueries({ queryKey: ['automations'] });
   };
 
   const handleDelete = async () => {
     if (!deleting) return;
-    await api.deleteAutomation(deleting.id);
+    if (!userId) {
+      toast.error('Logged-in user ID not found');
+      return;
+    }
+    const response = await fetch(
+      `${import.meta.env.VITE_API_URL}/automations/${encodeURIComponent(deleting.id)}?userId=${encodeURIComponent(userId)}`,
+      { method: 'DELETE', headers: { accept: '*/*' } },
+    );
+    if (!response.ok) {
+      toast.error('Failed to delete automation');
+      return;
+    }
     toast.success('Automation deleted');
     setDeleting(null);
     queryClient.invalidateQueries({ queryKey: ['automations'] });
@@ -283,6 +325,8 @@ const handleSave = async () => {
 
       {isLoading ? (
         <LoadingState />
+      ) : isAutomationsError ? (
+        <ErrorState message="Unable to load automations" />
       ) : !automations || automations.length === 0 ? (
         <EmptyState
           icon={Zap}
@@ -371,21 +415,35 @@ const handleSave = async () => {
                 <span className="text-sm font-medium">When</span>
               </div>
               <div className="space-y-3">
-                <Select value={form.trigger} onValueChange={(v) => setForm({ ...form, trigger: v })}>
+                <Select
+                  value={form.trigger}
+                  onValueChange={(v) =>
+                    setForm({
+                      ...form,
+                      trigger: v,
+                      triggerValue:
+                        v === 'Shipment status changes'
+                          ? form.triggerValue || 'Out for Delivery'
+                          : undefined,
+                    })
+                  }
+                >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {triggers.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">Status:</span>
-                  <Select value={form.triggerValue} onValueChange={(v) => setForm({ ...form, triggerValue: v })}>
-                    <SelectTrigger className="flex-1"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {triggerValues.map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {form.trigger === 'Shipment status changes' && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Status:</span>
+                    <Select value={form.triggerValue ?? undefined} onValueChange={(v) => setForm({ ...form, triggerValue: v })}>
+                      <SelectTrigger className="flex-1"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {triggerValues.map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
             </div>
 
