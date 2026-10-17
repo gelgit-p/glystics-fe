@@ -49,7 +49,7 @@ const triggers = [
   { value: 'Pickup scheduled', label: 'Pickup is scheduled' },
 ];
 
-const triggerValues = ['Out for Delivery', 'Failed', 'Delivered', 'Pickup Scheduled', 'Rider Assigned', 'In Transit', 'Picked Up'];
+const triggerValues = ['pending', 'confirmed', 'picked_up', 'in_transit', 'Rider Assigned', 'completed', 'cancelled'];
 
 function timeAgo(date: string | null): string {
   if (!date) return 'Never';
