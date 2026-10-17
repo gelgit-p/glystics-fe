@@ -7,14 +7,8 @@ import {
   MailOpen,
   XCircle,
   MessageCircle,
-  Clock,
-  CheckCircle,
-  XCircle as XIcon,
-  AlertCircle,
 } from 'lucide-react';
-import { api } from '@/lib/api';
-import { dashboardStats } from '@/lib/mock-data';
-import { PageHeader, StatusBadge, LoadingState, EmptyState } from '@/components/shared';
+import { PageHeader, StatusBadge, LoadingState, EmptyState, ErrorState } from '@/components/shared';
 import {
   Table,
   TableBody,
@@ -38,9 +32,36 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
-import type { Notification } from '@/types';
 
-const statusOptions = ['all', 'Queued', 'Sent', 'Delivered', 'Read', 'Failed'];
+interface NotificationRecord {
+  id: string;
+  userId: string;
+  recipientPhone: string;
+  templateName: string;
+  templateLanguage: string;
+  templateMessage: string | null;
+  whatsappMessageId: string | null;
+  deliveryTrackingId: string | null;
+  sendAt: string | null;
+  ReadAt: string | null;
+  status: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+const statusOptions = ['all', 'accepted', 'sent', 'delivered', 'read', 'failed'];
+
+function formatDate(value: string | null) {
+  return value
+    ? new Date(value).toLocaleString('en-NG', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : '—';
+}
 
 function MiniStat({ label, value, icon: Icon, color }: { label: string; value: string; icon: React.ComponentType<{ className?: string }>; color: string }) {
   return (
@@ -59,12 +80,57 @@ function MiniStat({ label, value, icon: Icon, color }: { label: string; value: s
 export default function NotificationsPage() {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
-  const [selected, setSelected] = useState<Notification | null>(null);
+  const [selected, setSelected] = useState<NotificationRecord | null>(null);
+  const userId = localStorage.getItem('userId');
 
-  const { data: notifications, isLoading } = useQuery({
-    queryKey: ['notifications', { search, status }],
-    queryFn: () => api.getNotifications({ search, status }),
+  const {
+    data: notificationRecords = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery<NotificationRecord[]>({
+    queryKey: ['notifications', userId],
+    enabled: Boolean(userId),
+    queryFn: async () => {
+      if (!userId) {
+        throw new Error('Logged-in user ID not found.');
+      }
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/notifications/${encodeURIComponent(userId)}`,
+        { headers: { accept: '*/*' } },
+      );
+      if (!response.ok) {
+        throw new Error('Unable to fetch notifications.');
+      }
+      const result: unknown = await response.json();
+      if (!Array.isArray(result)) {
+        throw new Error('Invalid notifications response.');
+      }
+      return result as NotificationRecord[];
+    },
   });
+
+  const normalizedSearch = search.trim().toLowerCase();
+  const notifications = notificationRecords.filter((notification) => {
+    const matchesSearch =
+      !normalizedSearch ||
+      [
+        notification.recipientPhone,
+        notification.templateName,
+        notification.deliveryTrackingId,
+        notification.templateMessage,
+        notification.whatsappMessageId,
+      ]
+        .filter((value): value is string => Boolean(value))
+        .some((value) => value.toLowerCase().includes(normalizedSearch));
+    const matchesStatus =
+      status === 'all' || notification.status?.toLowerCase() === status;
+    return matchesSearch && matchesStatus;
+  });
+  const countStatus = (value: string) =>
+    notificationRecords.filter(
+      (notification) => notification.status?.toLowerCase() === value,
+    ).length;
 
   return (
     <div>
@@ -72,10 +138,10 @@ export default function NotificationsPage() {
 
       {/* Stats */}
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <MiniStat label="Total Sent" value={dashboardStats.whatsappMessages.toLocaleString()} icon={Send} color="bg-primary/10 text-primary" />
-        <MiniStat label="Delivered" value={dashboardStats.whatsappDelivered.toLocaleString()} icon={Mail} color="bg-blue-50 text-blue-600 dark:bg-blue-950" />
-        <MiniStat label="Read" value={dashboardStats.whatsappRead.toLocaleString()} icon={MailOpen} color="bg-emerald-50 text-emerald-600 dark:bg-emerald-950" />
-        <MiniStat label="Failed" value={dashboardStats.whatsappFailed.toLocaleString()} icon={XCircle} color="bg-red-50 text-red-600 dark:bg-red-950" />
+        <MiniStat label="Total Sent" value={notificationRecords.length.toLocaleString()} icon={Send} color="bg-primary/10 text-primary" />
+        <MiniStat label="Delivered" value={countStatus('delivered').toLocaleString()} icon={Mail} color="bg-blue-50 text-blue-600 dark:bg-blue-950" />
+        <MiniStat label="Read" value={countStatus('read').toLocaleString()} icon={MailOpen} color="bg-emerald-50 text-emerald-600 dark:bg-emerald-950" />
+        <MiniStat label="Failed" value={countStatus('failed').toLocaleString()} icon={XCircle} color="bg-red-50 text-red-600 dark:bg-red-950" />
       </div>
 
       {/* Filters */}
@@ -101,6 +167,11 @@ export default function NotificationsPage() {
       <div className="rounded-xl border border-border bg-card">
         {isLoading ? (
           <LoadingState />
+        ) : isError || !userId ? (
+          <ErrorState
+            message={userId ? 'Unable to load notifications' : 'Logged-in user ID not found'}
+            onRetry={userId ? () => void refetch() : undefined}
+          />
         ) : !notifications || notifications.length === 0 ? (
           <EmptyState
             icon={MessageCircle}
@@ -111,9 +182,9 @@ export default function NotificationsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Recipient</TableHead>
+                <TableHead>Recipient Phone</TableHead>
                 <TableHead className="hidden md:table-cell">Template</TableHead>
-                <TableHead className="hidden lg:table-cell">Delivery</TableHead>
+                <TableHead className="hidden lg:table-cell">Delivery Tracking ID</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="hidden md:table-cell">Sent At</TableHead>
                 <TableHead className="hidden lg:table-cell">Read At</TableHead>
@@ -126,20 +197,15 @@ export default function NotificationsPage() {
                   className="cursor-pointer"
                   onClick={() => setSelected(n)}
                 >
-                  <TableCell>
-                    <div className="flex flex-col">
-                      <span className="font-medium">{n.recipient}</span>
-                      <span className="text-xs text-muted-foreground">{n.recipientPhone}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="hidden font-mono text-xs md:table-cell">{n.template}</TableCell>
-                  <TableCell className="hidden font-mono text-xs lg:table-cell">{n.trackingId}</TableCell>
-                  <TableCell><StatusBadge status={n.status} /></TableCell>
+                  <TableCell className="font-medium">{n.recipientPhone}</TableCell>
+                  <TableCell className="hidden font-mono text-xs md:table-cell">{n.templateName}</TableCell>
+                  <TableCell className="hidden font-mono text-xs lg:table-cell">{n.deliveryTrackingId ?? '—'}</TableCell>
+                  <TableCell><StatusBadge status={n.status ?? 'unknown'} /></TableCell>
                   <TableCell className="hidden text-sm text-muted-foreground md:table-cell">
-                    {new Date(n.sentAt).toLocaleString('en-NG', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    {formatDate(n.sendAt)}
                   </TableCell>
                   <TableCell className="hidden text-sm text-muted-foreground lg:table-cell">
-                    {n.readAt ? new Date(n.readAt).toLocaleString('en-NG', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}
+                    {formatDate(n.ReadAt)}
                   </TableCell>
                 </TableRow>
               ))}
@@ -163,84 +229,35 @@ export default function NotificationsPage() {
                 {/* Status */}
                 <div className="flex items-center justify-between rounded-lg border border-border p-3">
                   <span className="text-sm font-medium">Status</span>
-                  <StatusBadge status={selected.status} />
+                  <StatusBadge status={selected.status ?? 'unknown'} />
                 </div>
 
-                {/* Recipient */}
+                {/* Database fields */}
                 <div>
-                  <h4 className="mb-2 text-xs font-semibold uppercase text-muted-foreground">Recipient</h4>
-                  <div className="rounded-lg border border-border p-3 space-y-1.5 text-sm">
-                    <div className="flex justify-between"><span className="text-muted-foreground">Name</span><span className="font-medium">{selected.recipient}</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Phone</span><span className="font-medium">{selected.recipientPhone}</span></div>
-                  </div>
-                </div>
-
-                {/* Template */}
-                <div>
-                  <h4 className="mb-2 text-xs font-semibold uppercase text-muted-foreground">Template & Message</h4>
-                  <div className="rounded-lg border border-border p-3 space-y-2 text-sm">
-                    <div className="flex justify-between"><span className="text-muted-foreground">Template</span><span className="font-mono text-xs font-medium">{selected.template}</span></div>
-                    <div className="rounded-lg bg-muted p-3 text-sm whitespace-pre-wrap">{selected.templateBody}</div>
-                  </div>
-                </div>
-
-                {/* Parameters */}
-                <div>
-                  <h4 className="mb-2 text-xs font-semibold uppercase text-muted-foreground">Message Parameters</h4>
-                  <div className="rounded-lg border border-border p-3 space-y-1.5 text-sm">
-                    {Object.entries(selected.parameters).map(([k, v]) => (
-                      <div key={k} className="flex justify-between">
-                        <span className="font-mono text-xs text-muted-foreground">{`{{${k}}}`}</span>
-                        <span className="font-medium">{v}</span>
+                  <h4 className="mb-2 text-xs font-semibold uppercase text-muted-foreground">Notification Record</h4>
+                  <div className="rounded-lg border border-border p-3 space-y-3 text-sm">
+                    {([
+                      ['id', selected.id],
+                      ['userId', selected.userId],
+                      ['recipientPhone', selected.recipientPhone],
+                      ['templateName', selected.templateName],
+                      ['templateLanguage', selected.templateLanguage],
+                      ['templateMessage', selected.templateMessage],
+                      ['whatsappMessageId', selected.whatsappMessageId],
+                      ['deliveryTrackingId', selected.deliveryTrackingId],
+                      ['sendAt', formatDate(selected.sendAt)],
+                      ['ReadAt', formatDate(selected.ReadAt)],
+                      ['status', selected.status],
+                      ['createdAt', formatDate(selected.createdAt)],
+                      ['updatedAt', formatDate(selected.updatedAt)],
+                    ] as const).map(([field, value]) => (
+                      <div key={field} className="space-y-1">
+                        <p className="text-xs text-muted-foreground">{field}</p>
+                        <p className="break-all font-medium whitespace-pre-wrap">{value ?? '—'}</p>
                       </div>
                     ))}
                   </div>
                 </div>
-
-                {/* Delivery */}
-                <div>
-                  <h4 className="mb-2 text-xs font-semibold uppercase text-muted-foreground">Delivery</h4>
-                  <div className="rounded-lg border border-border p-3 space-y-1.5 text-sm">
-                    <div className="flex justify-between"><span className="text-muted-foreground">Tracking ID</span><span className="font-mono text-xs font-medium">{selected.trackingId}</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">WhatsApp Message ID</span><span className="font-mono text-xs">{selected.whatsappMessageId}</span></div>
-                  </div>
-                </div>
-
-                {/* Status timeline */}
-                <div>
-                  <h4 className="mb-2 text-xs font-semibold uppercase text-muted-foreground">Status Timeline</h4>
-                  <div className="rounded-lg border border-border p-3 space-y-3">
-                    {[
-                      { label: 'Queued', time: selected.sentAt, icon: Clock, done: true },
-                      { label: 'Sent', time: selected.sentAt, icon: Send, done: selected.status !== 'Queued' },
-                      { label: 'Delivered', time: selected.deliveredAt, icon: CheckCircle, done: !!selected.deliveredAt },
-                      { label: 'Read', time: selected.readAt, icon: MailOpen, done: !!selected.readAt },
-                    ].map((t) => (
-                      <div key={t.label} className="flex items-center gap-3">
-                        <div className={cn('flex h-7 w-7 items-center justify-center rounded-full', t.done ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950' : 'bg-muted text-muted-foreground')}>
-                          <t.icon className="h-3.5 w-3.5" />
-                        </div>
-                        <div className="flex-1">
-                          <p className={cn('text-sm font-medium', t.done ? 'text-foreground' : 'text-muted-foreground')}>{t.label}</p>
-                          {t.time && t.done && (
-                            <p className="text-xs text-muted-foreground">{new Date(t.time).toLocaleString('en-NG', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Error */}
-                {selected.error && (
-                  <div>
-                    <h4 className="mb-2 text-xs font-semibold uppercase text-muted-foreground">Error Information</h4>
-                    <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 dark:border-red-900 dark:bg-red-950">
-                      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
-                      <p className="text-sm text-red-700 dark:text-red-300">{selected.error}</p>
-                    </div>
-                  </div>
-                )}
               </div>
             </>
           )}
