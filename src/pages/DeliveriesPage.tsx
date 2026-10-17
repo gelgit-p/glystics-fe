@@ -1677,18 +1677,28 @@ export default function DeliveriesPage() {
   };
 
   const handleConfirmInsurance = () => {
-    if (!pendingCourier || !selectedInsuranceCode) {
-      toast.error('Select an insurance option to continue.');
+    if (!pendingCourier) {
+      toast.error('Selected courier is no longer available.');
+      return;
+    }
+
+    const selectedInsurance =
+      selectedInsuranceCode && selectedInsuranceCode !== 'none'
+        ? insuranceOptions.find(
+            (option) => option.code === selectedInsuranceCode,
+          )
+        : undefined;
+
+    if (selectedInsuranceCode && selectedInsuranceCode !== 'none' && !selectedInsurance) {
+      toast.error('Selected insurance option is no longer available.');
       return;
     }
 
     setInsuranceDialogOpen(false);
     void completeCourierBooking(
       pendingCourier,
-      selectedInsuranceCode,
-      insuranceOptions.find(
-        (option) => option.code === selectedInsuranceCode,
-      ),
+      selectedInsurance?.code ?? '',
+      selectedInsurance,
     );
   };
 
@@ -2992,21 +3002,23 @@ export default function DeliveriesPage() {
             <DialogHeader>
               <DialogTitle>Select shipment insurance</DialogTitle>
               <DialogDescription>
-                Choose an insurance policy before booking with{' '}
+                Insurance is optional. Choose a policy or continue without
+                insurance for{' '}
                 {pendingCourier?.courier_name}.
               </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-2">
-              <Label htmlFor="insurance-option">Insurance policy</Label>
+              <Label htmlFor="insurance-option">Insurance policy (optional)</Label>
               <Select
                 value={selectedInsuranceCode}
                 onValueChange={setSelectedInsuranceCode}
               >
                 <SelectTrigger id="insurance-option">
-                  <SelectValue placeholder="Choose an insurance policy" />
+                  <SelectValue placeholder="No insurance" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="none">No insurance</SelectItem>
                   {insuranceOptions.map((option) => (
                     <SelectItem key={option.code} value={option.code}>
                       {option.insurer} -{' '}
@@ -3033,15 +3045,25 @@ export default function DeliveriesPage() {
             <DialogFooter>
               <Button
                 variant="outline"
-                onClick={() => setInsuranceDialogOpen(false)}
+                onClick={() => {
+                  if (!pendingCourier) {
+                    setInsuranceDialogOpen(false);
+                    return;
+                  }
+                  setInsuranceDialogOpen(false);
+                  void completeCourierBooking(pendingCourier, '', undefined);
+                }}
+                disabled={bookingCourierId !== null}
               >
                 Cancel
               </Button>
               <Button
                 onClick={handleConfirmInsurance}
-                disabled={!selectedInsuranceCode || bookingCourierId !== null}
+                disabled={bookingCourierId !== null}
               >
-                Continue to booking
+                Continue {selectedInsuranceCode && selectedInsuranceCode !== 'none'
+                  ? 'with insurance'
+                  : 'without insurance'}
               </Button>
             </DialogFooter>
           </DialogContent>
