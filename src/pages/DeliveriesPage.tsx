@@ -1501,6 +1501,52 @@ export default function DeliveriesPage() {
         throw new Error('Delivery ID or tracking ID is missing.');
       }
 
+      const insuranceAmount = selectedInsurance?.amount ?? 0;
+      if (
+        insuranceAmount > 0 &&
+        selectedInsurance?.currency.toUpperCase() !== currency.toUpperCase()
+      ) {
+        throw new Error(
+          'Insurance currency does not match the selected courier rate currency.',
+        );
+      }
+
+      const insuranceSaveResponse = await fetch(
+        `${import.meta.env.VITE_API_URL}/delivery/${encodeURIComponent(savedDeliveryId)}`,
+        {
+          method: 'PATCH',
+          headers: {
+            accept: '*/*',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            insuranceAmount,
+            insurance_policy_condition:
+              selectedInsurance?.policy_condition ?? '',
+            insure_percentage: selectedInsurance?.insure_percentage ?? 0,
+            insurance_cost: insuranceAmount,
+            insuranceCode: insuranceCode || '',
+            insurerName: selectedInsurance?.insurer ?? '',
+          }),
+        },
+      );
+      const insuranceSaveResult: unknown = await insuranceSaveResponse
+        .json()
+        .catch(() => null);
+      if (!insuranceSaveResponse.ok) {
+        const message =
+          typeof insuranceSaveResult === 'object' &&
+          insuranceSaveResult !== null &&
+          'message' in insuranceSaveResult
+            ? insuranceSaveResult.message
+            : undefined;
+        throw new Error(
+          typeof message === 'string'
+            ? message
+            : 'Unable to save selected insurance details.',
+        );
+      }
+
       const checkoutResponse = await fetch(
         `${import.meta.env.VITE_API_URL}/delivery/${encodeURIComponent(savedDeliveryId)}/checkout-session`,
         {
@@ -1516,12 +1562,6 @@ export default function DeliveriesPage() {
             courier_id: courierId,
             service_code: selectedCourier.service_code,
             insurance_code: insuranceCode || undefined,
-            insuranceAmount: selectedInsurance?.amount ?? 0,
-            insuranceCurrency: selectedInsurance?.currency,
-            insurance_policy_condition:
-              selectedInsurance?.policy_condition,
-            insure_percentage: selectedInsurance?.insure_percentage,
-            insurerName: selectedInsurance?.insurer,
           }),
         },
       );
