@@ -3,18 +3,12 @@ import {
   notifications as mockNotifications,
   templates as mockTemplates,
   automations as mockAutomations,
-  contacts as mockContacts,
   apiKeys as mockApiKeys,
   webhooks as mockWebhooks,
   invoices as mockInvoices,
   teamMembers as mockTeamMembers,
   dashboardStats,
   deliveryActivityData,
-  messageVolumeData,
-  deliveryRateData,
-  readRateData,
-  notificationBreakdownData,
-  engagementData,
   billingPlan,
   usage,
   pricingPlans,
@@ -175,17 +169,6 @@ export const api = {
     return delay(true);
   },
 
-  // Contacts
-  getContacts: (search?: string) => {
-    let result = [...mockContacts];
-    if (search) {
-      const q = search.toLowerCase();
-      result = result.filter((c) => c.name.toLowerCase().includes(q) || c.phone.includes(q));
-    }
-    return delay(result);
-  },
-  getContact: (id: string) => delay(mockContacts.find((c) => c.id === id)),
-
   // WhatsApp
   getWhatsAppConnection: () => delay(currentWhatsApp),
   getDisconnectedWhatsAppConnection: () => delay(disconnectedWhatsAppConnection),
@@ -211,13 +194,6 @@ export const api = {
       disconnectedWhatsAppConnection as unknown as WhatsAppConnection;
     return delay(currentWhatsApp, 800);
   },
-
-  // Analytics
-  getMessageVolume: () => delay(messageVolumeData),
-  getDeliveryRate: () => delay(deliveryRateData),
-  getReadRate: () => delay(readRateData),
-  getNotificationBreakdown: () => delay(notificationBreakdownData),
-  getEngagement: () => delay(engagementData),
 
   // Billing
   getBillingPlan: () => delay(billingPlan),

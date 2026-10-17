@@ -99,18 +99,6 @@ export interface Automation {
   totalRuns: number;
 }
 
-export interface Contact {
-  id: string;
-  name: string;
-  phone: string;
-  totalDeliveries: number;
-  lastDelivery: string;
-  whatsappStatus: 'Active' | 'Inactive';
-  email: string;
-  address: string;
-  createdAt: string;
-}
-
 export interface ApiKey {
   id: string;
   name: string;

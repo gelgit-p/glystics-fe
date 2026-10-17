@@ -50,8 +50,13 @@ const triggerValues = [
   'Pending',
   'Confirmed',
   'Picked Up',
+  'Pickup Scheduled',
+  'Rider Assigned',
   'In Transit',
+  'Out for Delivery',
+  'Delivered',
   'Completed',
+  'Failed',
   'Cancelled',
 ];
 

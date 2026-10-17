@@ -16,9 +16,7 @@ const DeliveryDetailsPage = lazy(() => import('@/pages/DeliveryDetailsPage'));
 const NotificationsPage = lazy(() => import('@/pages/NotificationsPage'));
 const TemplatesPage = lazy(() => import('@/pages/TemplatesPage'));
 const AutomationsPage = lazy(() => import('@/pages/AutomationsPage'));
-const ContactsPage = lazy(() => import('@/pages/ContactsPage'));
 const WhatsAppPage = lazy(() => import('@/pages/WhatsAppPage'));
-const AnalyticsPage = lazy(() => import('@/pages/AnalyticsPage'));
 const BillingPage = lazy(() => import('@/pages/BillingPage'));
 const SettingsPage = lazy(() => import('@/pages/settings/SettingsPage'));
 const ProfileSettingsPage = lazy(() => import('@/pages/settings/ProfileSettingsPage'));
@@ -72,9 +70,7 @@ export default function App() {
               <Route path="/notifications" element={<NotificationsPage />} />
               <Route path="/templates" element={<TemplatesPage />} />
               <Route path="/automations" element={<AutomationsPage />} />
-              <Route path="/contacts" element={<ContactsPage />} />
               <Route path="/whatsapp" element={<WhatsAppPage />} />
-              <Route path="/analytics" element={<AnalyticsPage />} />
               <Route path="/billing" element={<BillingPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/settings/profile" element={<ProfileSettingsPage />} />

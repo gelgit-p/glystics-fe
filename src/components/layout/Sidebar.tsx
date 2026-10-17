@@ -5,9 +5,7 @@ import {
   Bell,
   MessageSquare,
   Zap,
-  Users,
   Settings,
-  BarChart3,
   CreditCard,
   ChevronLeft,
   MessageCircle,
@@ -21,9 +19,7 @@ const navItems = [
   { to: '/notifications', label: 'Notifications', icon: Bell },
   { to: '/templates', label: 'Templates', icon: MessageSquare },
   { to: '/automations', label: 'Automations', icon: Zap },
-  { to: '/contacts', label: 'Contacts', icon: Users },
   { to: '/whatsapp', label: 'WhatsApp', icon: MessageCircle },
-  { to: '/analytics', label: 'Analytics', icon: BarChart3 },
   { to: '/billing', label: 'Billing', icon: CreditCard },
 ];
 

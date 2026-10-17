@@ -3,7 +3,6 @@ import type {
   Notification,
   Template,
   Automation,
-  Contact,
   ApiKey,
   Webhook,
   Invoice,
@@ -48,37 +47,6 @@ export const deliveryActivityData = [
   { date: 'Sat', created: 280, pickedUp: 250, inTransit: 210, delivered: 180 },
   { date: 'Sun', created: 190, pickedUp: 160, inTransit: 130, delivered: 110 },
 ];
-
-export const messageVolumeData = Array.from({ length: 30 }, (_, i) => ({
-  date: `${i + 1}`,
-  sent: Math.floor(400 + Math.random() * 300),
-  delivered: Math.floor(380 + Math.random() * 280),
-  read: Math.floor(350 + Math.random() * 260),
-}));
-
-export const deliveryRateData = [
-  { name: 'Delivered', value: 17921, color: 'hsl(var(--chart-1))' },
-  { name: 'Failed', value: 499, color: 'hsl(var(--chart-5))' },
-];
-
-export const readRateData = [
-  { name: 'Read', value: 16840, color: 'hsl(var(--chart-2))' },
-  { name: 'Delivered Only', value: 1081, color: 'hsl(var(--chart-3))' },
-];
-
-export const notificationBreakdownData = [
-  { name: 'Pickup', value: 4200, color: 'hsl(var(--chart-1))' },
-  { name: 'In Transit', value: 3800, color: 'hsl(var(--chart-2))' },
-  { name: 'Out for Delivery', value: 3500, color: 'hsl(var(--chart-3))' },
-  { name: 'Delivered', value: 5900, color: 'hsl(var(--chart-4))' },
-  { name: 'Failed', value: 1020, color: 'hsl(var(--chart-5))' },
-];
-
-export const engagementData = {
-  avgReadTime: '2.4 min',
-  deliveryEngagement: '91.4%',
-  failedRate: '2.7%',
-};
 
 const couriers = ['Swift Rider', 'ExpressGo', 'DeliverFast', 'Nigeria Post', 'Flash Courier'];
 const cities = ['Lagos', 'Abuja', 'Port Harcourt', 'Kano', 'Ibadan', 'Enugu', 'Benin City'];
@@ -359,18 +327,6 @@ export const automations: Automation[] = [
     totalRuns: 3800,
   },
 ];
-
-export const contacts: Contact[] = Array.from({ length: 24 }, (_, i) => ({
-  id: `contact-${i + 1}`,
-  name: customerNames[i % customerNames.length] + (i > 11 ? ' Jr' : ''),
-  phone: phones[i % phones.length],
-  totalDeliveries: Math.floor(Math.random() * 50) + 1,
-  lastDelivery: daysAgo(i % 20),
-  whatsappStatus: i % 4 === 0 ? 'Inactive' : 'Active',
-  email: `customer${i + 1}@email.com`,
-  address: `${i + 10} Adeola St, ${cities[i % cities.length]}`,
-  createdAt: daysAgo(i * 3),
-}));
 
 export const apiKeys: ApiKey[] = [
   { id: 'key-1', name: 'Production API Key', key: 'sk_live_aB3xK9pQ2mN7vR4tZ', createdAt: daysAgo(30), lastUsed: minsAgo(5) },
