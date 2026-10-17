@@ -1495,6 +1495,68 @@ export default function DeliveriesPage() {
         setDeliveryId(savedDeliveryId);
         setCheckoutTrackingId(trackingId);
         await queryClient.invalidateQueries({ queryKey: ['deliveries'] });
+
+        try {
+          const templatesResponse = await fetch(
+            `${import.meta.env.VITE_API_URL}/whatsapp/message-templates/${encodeURIComponent(currentUserId)}?status=APPROVED`,
+            { headers: { accept: '*/*' } },
+          );
+          const templatesResult: unknown = await templatesResponse
+            .json()
+            .catch(() => null);
+          if (!templatesResponse.ok) {
+            throw new Error('Unable to fetch approved WhatsApp templates.');
+          }
+
+          const templates =
+            typeof templatesResult === 'object' &&
+            templatesResult !== null &&
+            'data' in templatesResult &&
+            Array.isArray(templatesResult.data)
+              ? templatesResult.data
+              : [];
+          const confirmationTemplate = templates.find(
+            (template: unknown) =>
+              typeof template === 'object' &&
+              template !== null &&
+              'name' in template &&
+              template.name === 'order_confirmed' &&
+              'status' in template &&
+              template.status === 'APPROVED' &&
+              'language' in template &&
+              typeof template.language === 'string',
+          );
+
+          if (!confirmationTemplate) {
+            throw new Error(
+              'The approved order_confirmed WhatsApp template was not found.',
+            );
+          }
+
+          const messageResponse = await fetch(
+            `${import.meta.env.VITE_API_URL}/whatsapp/send-order-confirmation`,
+            {
+              method: 'POST',
+              headers: {
+                accept: '*/*',
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                userId: currentUserId,
+                trackingId,
+                templateLanguage: confirmationTemplate.language,
+              }),
+            },
+          );
+          if (!messageResponse.ok) {
+            throw new Error('Unable to send the WhatsApp order confirmation.');
+          }
+        } catch (error) {
+          console.error('WhatsApp order confirmation failed:', error);
+          toast.warning(
+            'Delivery saved, but its WhatsApp confirmation could not be sent.',
+          );
+        }
       }
 
       if (!savedDeliveryId || !trackingId) {
