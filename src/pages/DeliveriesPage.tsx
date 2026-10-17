@@ -348,6 +348,7 @@ interface InsuranceRatesResponse {
 
 interface CheckoutDeliveryStatus {
   paymentStatus: string;
+  bookingStatus: string;
   deliveryStatus: string | null;
   shipbubbleOrderId: string | null;
   bookingError: string | null;
@@ -577,7 +578,7 @@ export default function DeliveriesPage() {
 
   const checkoutStatusQuery = useQuery<CheckoutDeliveryStatus>({
     queryKey: ['delivery-checkout-status', checkoutTrackingId],
-    enabled: Boolean(checkoutTrackingId),
+    enabled: checkoutDialogOpen && Boolean(checkoutTrackingId),
     queryFn: async () => {
       if (!checkoutTrackingId) {
         throw new Error('Delivery tracking ID is missing.');
@@ -595,6 +596,8 @@ export default function DeliveriesPage() {
         result === null ||
         !('paymentStatus' in result) ||
         typeof result.paymentStatus !== 'string' ||
+        !('bookingStatus' in result) ||
+        typeof result.bookingStatus !== 'string' ||
         !('deliveryStatus' in result) ||
         (result.deliveryStatus !== null &&
           typeof result.deliveryStatus !== 'string') ||
@@ -609,18 +612,22 @@ export default function DeliveriesPage() {
       }
       return result as CheckoutDeliveryStatus;
     },
-    refetchInterval: checkoutTrackingId ? 5000 : false,
+    refetchInterval: checkoutDialogOpen ? 5000 : false,
   });
 
   useEffect(() => {
     const status = checkoutStatusQuery.data;
-    if (status?.paymentStatus === 'PAID' && status.shipbubbleOrderId) {
+    if (
+      status?.paymentStatus === 'PAID' &&
+      status.bookingStatus === 'BOOKED' &&
+      status.shipbubbleOrderId
+    ) {
       setCheckoutDialogOpen(false);
       setCheckoutUrl(null);
       setCheckoutTrackingId(null);
       toast.success('Payment received and courier booking confirmed.');
       void queryClient.invalidateQueries({ queryKey: ['deliveries'] });
-    } else if (status?.paymentStatus === 'BOOKING_FAILED') {
+    } else if (status?.bookingStatus === 'FAILED') {
       toast.error(
         status.bookingError ??
           'Payment succeeded, but courier booking needs attention.',
@@ -628,6 +635,7 @@ export default function DeliveriesPage() {
     }
   }, [
     checkoutStatusQuery.data?.paymentStatus,
+    checkoutStatusQuery.data?.bookingStatus,
     checkoutStatusQuery.data?.shipbubbleOrderId,
     checkoutStatusQuery.data?.bookingError,
     queryClient,
@@ -2943,15 +2951,15 @@ export default function DeliveriesPage() {
             )}
 
             <div aria-live="polite" className="text-sm text-muted-foreground">
-              {checkoutStatusQuery.data?.paymentStatus === 'BOOKING_FAILED'
+              {checkoutStatusQuery.data?.bookingStatus === 'FAILED'
                 ? checkoutStatusQuery.data.bookingError ??
                   'Payment was received, but courier booking failed. Please contact support.'
-                : checkoutStatusQuery.data?.paymentStatus === 'PROCESSING'
+                : checkoutStatusQuery.data?.bookingStatus === 'PROCESSING'
                   ? 'Payment confirmed. Booking the courier...'
                   : checkoutStatusQuery.data?.paymentStatus === 'PAID'
                     ? 'Payment confirmed. Finalizing courier booking...'
                     : checkoutStatusQuery.isError
-                      ? 'Unable to refresh payment status. The webhook will still process payment.'
+                      ? 'Unable to refresh payment status. The webhook or payment verification will continue processing.'
                       : 'Waiting for payment confirmation...'}
             </div>
 
