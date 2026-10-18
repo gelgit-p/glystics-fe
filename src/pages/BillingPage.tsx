@@ -33,6 +33,12 @@ interface CreditPackage {
   bonusCredits: number;
 }
 
+const CREDIT_PACKAGE_OFFERS = [
+  { name: 'Starter', priceKobo: 50_000, credits: 50, bonusCredits: 0 },
+  { name: 'Growth', priceKobo: 200_000, credits: 220, bonusCredits: 0 },
+  { name: 'Business', priceKobo: 500_000, credits: 600, bonusCredits: 0 },
+] as const;
+
 interface CreditTransaction {
   id: string;
   type: 'PURCHASE' | 'BONUS' | 'USAGE' | 'REFUND' | 'ADMIN_ADJUSTMENT';
@@ -314,31 +320,36 @@ export default function BillingPage() {
           </div>
         ) : packagesQuery.data?.length ? (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {packagesQuery.data.map((item) => (
-              <article key={item.id} className="flex flex-col rounded-xl border border-border bg-card p-5">
-                <h3 className="font-semibold">{item.name}</h3>
-                <p className="mt-2 text-2xl font-bold">{formatNaira(item.priceKobo)}</p>
+            {CREDIT_PACKAGE_OFFERS.map((offer) => {
+              const packageRecord = packagesQuery.data.find(
+                (item) => item.name === offer.name,
+              );
+              return (
+              <article key={offer.name} className="flex flex-col rounded-xl border border-border bg-card p-5">
+                <h3 className="font-semibold">{offer.name}</h3>
+                <p className="mt-2 text-2xl font-bold">{formatNaira(offer.priceKobo)}</p>
                 <div className="mt-4 flex items-baseline gap-1">
-                  <span className="text-xl font-semibold">{item.credits.toLocaleString()}</span>
+                  <span className="text-xl font-semibold">{offer.credits.toLocaleString()}</span>
                   <span className="text-sm text-muted-foreground">credits</span>
                 </div>
-                {item.bonusCredits > 0 ? (
+                {offer.bonusCredits > 0 ? (
                   <p className="mt-1 text-sm font-medium text-emerald-700 dark:text-emerald-400">
-                    +{item.bonusCredits.toLocaleString()} bonus credits
+                    +{offer.bonusCredits.toLocaleString()} bonus credits
                   </p>
                 ) : (
                   <p className="mt-1 text-sm text-muted-foreground">No bonus credits</p>
                 )}
                 <Button
                   className="mt-5"
-                  onClick={() => purchaseMutation.mutate(item.id)}
-                  disabled={purchaseMutation.isPending}
+                  onClick={() => packageRecord && purchaseMutation.mutate(packageRecord.id)}
+                  disabled={purchaseMutation.isPending || !packageRecord}
                 >
                   {purchaseMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ExternalLink className="mr-2 h-4 w-4" />}
-                  Purchase package
+                  {packageRecord ? 'Purchase package' : 'Currently unavailable'}
                 </Button>
               </article>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
