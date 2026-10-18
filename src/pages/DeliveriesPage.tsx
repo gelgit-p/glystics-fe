@@ -470,6 +470,7 @@ const validateAddress = async ({
       headers: {
         accept: '*/*',
         'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('accessToken') ?? ''}`,
       },
 
       body: JSON.stringify({
@@ -685,6 +686,7 @@ export default function DeliveriesPage() {
               headers: {
                 accept: '*/*',
                 'Content-Type': 'application/json',
+                Authorization: 'Bearer ' + (localStorage.getItem('accessToken') ?? ''),
               },
               body: JSON.stringify({
                 userId,

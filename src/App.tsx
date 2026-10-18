@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { QueryProvider } from '@/providers/QueryProvider';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { CreditAccessGate } from '@/components/layout/CreditAccessGate';
 import { LoadingState } from '@/components/shared';
 
 const LandingPage = lazy(() => import('@/pages/LandingPage'));
@@ -65,12 +66,12 @@ export default function App() {
 
             <Route element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
               <Route path="/dashboard" element={<DashboardPage />} />
-              <Route path="/deliveries" element={<DeliveriesPage />} />
-              <Route path="/deliveries/:id" element={<DeliveryDetailsPage />} />
-              <Route path="/notifications" element={<NotificationsPage />} />
-              <Route path="/templates" element={<TemplatesPage />} />
-              <Route path="/automations" element={<AutomationsPage />} />
-              <Route path="/whatsapp" element={<WhatsAppPage />} />
+              <Route path="/deliveries" element={<CreditAccessGate><DeliveriesPage /></CreditAccessGate>} />
+              <Route path="/deliveries/:id" element={<CreditAccessGate><DeliveryDetailsPage /></CreditAccessGate>} />
+              <Route path="/notifications" element={<CreditAccessGate><NotificationsPage /></CreditAccessGate>} />
+              <Route path="/templates" element={<CreditAccessGate><TemplatesPage /></CreditAccessGate>} />
+              <Route path="/automations" element={<CreditAccessGate><AutomationsPage /></CreditAccessGate>} />
+              <Route path="/whatsapp" element={<CreditAccessGate><WhatsAppPage /></CreditAccessGate>} />
               <Route path="/billing" element={<BillingPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/settings/profile" element={<ProfileSettingsPage />} />

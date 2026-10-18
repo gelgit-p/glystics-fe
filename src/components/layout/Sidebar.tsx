@@ -1,4 +1,6 @@
 import { NavLink, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import {
   LayoutDashboard,
   Package,
@@ -9,9 +11,31 @@ import {
   CreditCard,
   ChevronLeft,
   MessageCircle,
+  LockKeyhole,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
+
+function useCreditAccess() {
+  const userId = localStorage.getItem('userId') ?? '';
+  const accessToken = localStorage.getItem('accessToken') ?? '';
+  const { data } = useQuery<{ hasPurchasedCredits: boolean }>({
+    queryKey: ['credit-wallet', userId],
+    queryFn: async () => {
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/credits/wallet`,
+        { headers: { Authorization: `Bearer ${accessToken}` } },
+      );
+      if (!response.ok) {
+        throw new Error('Unable to check credit access');
+      }
+      return response.json();
+    },
+    enabled: Boolean(userId && accessToken),
+    staleTime: 15_000,
+  });
+  return data?.hasPurchasedCredits === true;
+}
 
 const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -25,6 +49,8 @@ const navItems = [
 
 export function Sidebar({ collapsed, setCollapsed }: { collapsed: boolean; setCollapsed: (v: boolean) => void }) {
   const location = useLocation();
+  const navigate = useNavigate();
+  const hasPurchasedCredits = useCreditAccess();
 
   return (
     <aside
@@ -48,6 +74,23 @@ export function Sidebar({ collapsed, setCollapsed }: { collapsed: boolean; setCo
       <nav className="flex-1 space-y-1 overflow-y-auto scrollbar-thin p-3">
         {navItems.map((item) => {
           const active = location.pathname.startsWith(item.to);
+          const creditLocked =
+            ['/deliveries', '/notifications', '/templates', '/automations', '/whatsapp'].includes(item.to) &&
+            !hasPurchasedCredits;
+          if (creditLocked) {
+            return (
+              <button
+                key={item.to}
+                type="button"
+                title="Purchase credits to unlock this page"
+                onClick={() => navigate('/billing?purchaseRequired=true')}
+                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-muted-foreground opacity-50 transition-colors hover:bg-muted"
+              >
+                <item.icon className="h-[18px] w-[18px] shrink-0" />
+                {!collapsed && <><span>{item.label}</span><LockKeyhole className="ml-auto h-3.5 w-3.5" /></>}
+              </button>
+            );
+          }
           return (
             <NavLink
               key={item.to}
@@ -95,6 +138,8 @@ export function Sidebar({ collapsed, setCollapsed }: { collapsed: boolean; setCo
 
 export function MobileSidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
   const location = useLocation();
+  const navigate = useNavigate();
+  const hasPurchasedCredits = useCreditAccess();
 
   return (
     <>
@@ -114,6 +159,27 @@ export function MobileSidebar({ open, onClose }: { open: boolean; onClose: () =>
         <nav className="flex-1 space-y-1 overflow-y-auto scrollbar-thin p-3">
           {navItems.map((item) => {
             const active = location.pathname.startsWith(item.to);
+            const creditLocked =
+              ['/deliveries', '/notifications', '/templates', '/automations', '/whatsapp'].includes(item.to) &&
+              !hasPurchasedCredits;
+            if (creditLocked) {
+              return (
+                <button
+                  key={item.to}
+                  type="button"
+                  title="Purchase credits to unlock this page"
+                  onClick={() => {
+                    onClose();
+                    navigate('/billing?purchaseRequired=true');
+                  }}
+                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-muted-foreground opacity-50 transition-colors hover:bg-muted"
+                >
+                  <item.icon className="h-[18px] w-[18px] shrink-0" />
+                  <span>{item.label}</span>
+                  <LockKeyhole className="ml-auto h-3.5 w-3.5" />
+                </button>
+              );
+            }
             return (
               <NavLink
                 key={item.to}
