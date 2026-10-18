@@ -9,6 +9,7 @@ import {
   ArrowLeft,
   Clock,
   Download,
+  ExternalLink,
   Eye,
   MapPin,
   MoreHorizontal,
@@ -125,6 +126,7 @@ interface DeliveryRecord {
   senderAddress: string;
   receiverAddress: string;
   deliveryStatus: string;
+  checkoutUrl?: string | null;
   createdAt: string;
   courier_name?: string | null;
 }
@@ -138,6 +140,8 @@ interface DeliveryTableRow {
   destination: string;
   courier: string;
   status: string;
+  isPaymentPending: boolean;
+  checkoutUrl: string | null;
   createdAt: string;
 }
 
@@ -158,6 +162,9 @@ const isDeliveryRecord = (
     typeof record.senderAddress === 'string' &&
     typeof record.receiverAddress === 'string' &&
     typeof record.deliveryStatus === 'string' &&
+    (record.checkoutUrl === undefined ||
+      record.checkoutUrl === null ||
+      typeof record.checkoutUrl === 'string') &&
     typeof record.createdAt === 'string' &&
     (record.courier_name === undefined ||
       record.courier_name === null ||
@@ -786,6 +793,8 @@ export default function DeliveriesPage() {
           origin: delivery.senderAddress,
           destination: delivery.receiverAddress,
           courier: delivery.courier_name || 'Not assigned',
+          isPaymentPending: delivery.deliveryStatus === 'PAYMENT_PENDING',
+          checkoutUrl: delivery.checkoutUrl ?? null,
           status: delivery.deliveryStatus
             .toLowerCase()
             .replace(/_/g, ' ')
@@ -3244,6 +3253,10 @@ export default function DeliveriesPage() {
                   Status
                 </TableHead>
 
+                <TableHead>
+                  Shipment Payment
+                </TableHead>
+
                 <TableHead className="hidden lg:table-cell">
                   Created
                 </TableHead>
@@ -3321,6 +3334,22 @@ export default function DeliveriesPage() {
                           delivery.status
                         }
                       />
+                    </TableCell>
+
+                    <TableCell>
+                      {delivery.isPaymentPending && delivery.checkoutUrl ? (
+                        <a
+                          href={delivery.checkoutUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+                        >
+                          Complete payment
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </a>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">—</span>
+                      )}
                     </TableCell>
 
                     {/* Created */}
