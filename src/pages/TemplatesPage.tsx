@@ -390,6 +390,7 @@ console.log(
 }
 
 async function createWhatsAppTemplate(payload: {
+  wabaId: string;
   name: string;
   language: string;
   category: string;
@@ -714,6 +715,44 @@ export default function TemplatesPage() {
 
 const userId: string = localStorage.getItem('userId') ?? '';
 
+const { data: selectedWabaId } = useQuery<string>({
+  queryKey: ['template-create-waba', userId],
+  queryFn: async () => {
+    if (!userId) {
+      throw new Error('Logged-in user ID not found');
+    }
+
+    const response = await fetch(
+      `${import.meta.env.VITE_API_URL}/auth/${encodeURIComponent(userId)}`,
+      {
+        method: 'GET',
+        headers: { accept: '*/*' },
+      },
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch WhatsApp Business account: ${response.status} ${response.statusText}`,
+      );
+    }
+
+    const userDetails: unknown = await response.json();
+    if (
+      typeof userDetails !== 'object' ||
+      userDetails === null ||
+      !('selectedWabaId' in userDetails) ||
+      typeof userDetails.selectedWabaId !== 'string' ||
+      !userDetails.selectedWabaId.trim()
+    ) {
+      throw new Error('No WhatsApp Business Account is selected for this user');
+    }
+
+    return userDetails.selectedWabaId.trim();
+  },
+  enabled: Boolean(userId),
+  staleTime: 30_000,
+});
+
 const {
   data: templates = [],
   isLoading,
@@ -868,7 +907,14 @@ const closeEditor = () => {
         });
       }
 
+      if (!selectedWabaId) {
+        throw new Error(
+          'Select a WhatsApp Business Account before creating a template',
+        );
+      }
+
       await createWhatsAppTemplate({
+        wabaId: selectedWabaId,
         name: form.name.trim().toLowerCase().replace(/\s+/g, '_'),
         language: languageCodes[form.language ?? 'English'] ?? 'en_US',
         category: (form.category ?? 'Utility').toLowerCase(),
