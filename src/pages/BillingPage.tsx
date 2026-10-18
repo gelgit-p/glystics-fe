@@ -14,6 +14,13 @@ import {
 } from 'lucide-react';
 import { PageHeader, LoadingState } from '@/components/shared';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { authenticatedFetch as fetch } from '@/lib/authenticated-fetch';
 import { CREDIT_PACKAGE_OFFERS, formatNaira } from '@/lib/credit-packages';
 
@@ -88,6 +95,7 @@ export default function BillingPage() {
   const [verificationReference, setVerificationReference] = useState(
     () => localStorage.getItem('pendingCreditReference') ?? '',
   );
+  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
   const userId = localStorage.getItem('userId') ?? '';
   const walletQuery = useQuery<CreditWallet>({
     queryKey: ['credit-wallet', userId],
@@ -161,7 +169,7 @@ export default function BillingPage() {
         result.purchase.paymentReference,
       );
       setVerificationReference(result.purchase.paymentReference);
-      window.location.assign(result.checkoutUrl);
+      setCheckoutUrl(result.checkoutUrl);
     },
     onError: (error) => {
       toast.error(error instanceof Error ? error.message : 'Purchase failed');
@@ -209,6 +217,45 @@ export default function BillingPage() {
 
   return (
     <div className="space-y-6">
+      <Dialog
+        open={checkoutUrl !== null}
+        onOpenChange={(open) => {
+          if (!open) setCheckoutUrl(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Complete your credit purchase</DialogTitle>
+            <DialogDescription>
+              Continue to Bachs secure checkout to complete payment. Your credits
+              will be added after the payment is verified.
+            </DialogDescription>
+          </DialogHeader>
+          {checkoutUrl && (
+            <div className="space-y-4">
+              <a
+                href={checkoutUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block break-all rounded-md border border-border bg-muted/40 p-3 text-sm text-primary underline underline-offset-4"
+              >
+                {checkoutUrl}
+              </a>
+              <Button asChild className="w-full">
+                <a
+                  href={checkoutUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Open Bachs checkout
+                  <ExternalLink className="ml-2 h-4 w-4" />
+                </a>
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <PageHeader
         title="Credit Wallet"
         description={`Manage credits${walletQuery.data?.businessName ? ` for ${walletQuery.data.businessName}` : ''}. Credits are charged for deliveries and WhatsApp notifications.`}
