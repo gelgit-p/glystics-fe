@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link, Navigate } from 'react-router-dom';
+import { authenticatedFetch as fetch } from '@/lib/authenticated-fetch';
 
 interface CreditWalletAccess {
   hasPurchasedCredits: boolean;

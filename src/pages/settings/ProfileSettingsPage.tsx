@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { authenticatedFetch as fetch } from '@/lib/authenticated-fetch';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { User, Mail, Building2 } from 'lucide-react';
@@ -24,7 +25,7 @@ export default function ProfileSettingsPage() {
     queryKey: ['user-details', userId],
     queryFn: async () => {
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/auth/${encodeURIComponent(userId)}`,
+        `${import.meta.env.VITE_API_URL}/auth/me`,
         { headers: { accept: '*/*' } },
       );
       if (!response.ok) {

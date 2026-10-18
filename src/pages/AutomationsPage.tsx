@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { authenticatedFetch as fetch } from '@/lib/authenticated-fetch';
 import {
   Plus,
   Zap,
@@ -100,7 +101,7 @@ export default function AutomationsPage() {
     }
 
     const response = await fetch(
-      `${import.meta.env.VITE_API_URL}/automations?userId=${encodeURIComponent(userId)}`,
+      `${import.meta.env.VITE_API_URL}/automations`,
       {
         method: 'GET',
         headers: {
@@ -255,7 +256,6 @@ const handleSave = async () => {
 
   try {
     const payload = {
-      userId,
       name: form.name.trim(),
       trigger: form.trigger,
       triggerValue:
@@ -269,7 +269,7 @@ const handleSave = async () => {
 
     if (editing) {
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/automations/${encodeURIComponent(editing.id)}?userId=${encodeURIComponent(userId)}`,
+        `${import.meta.env.VITE_API_URL}/automations/${encodeURIComponent(editing.id)}`,
         {
           method: 'PUT',
           headers: {
@@ -338,7 +338,7 @@ const handleSave = async () => {
       return;
     }
     const response = await fetch(
-      `${import.meta.env.VITE_API_URL}/automations/${encodeURIComponent(id)}/toggle?userId=${encodeURIComponent(userId)}`,
+      `${import.meta.env.VITE_API_URL}/automations/${encodeURIComponent(id)}/toggle`,
       { method: 'PATCH', headers: { accept: '*/*' } },
     );
     if (!response.ok) {
@@ -355,7 +355,7 @@ const handleSave = async () => {
       return;
     }
     const response = await fetch(
-      `${import.meta.env.VITE_API_URL}/automations/${encodeURIComponent(deleting.id)}?userId=${encodeURIComponent(userId)}`,
+      `${import.meta.env.VITE_API_URL}/automations/${encodeURIComponent(deleting.id)}`,
       { method: 'DELETE', headers: { accept: '*/*' } },
     );
     if (!response.ok) {

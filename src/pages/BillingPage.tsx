@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { PageHeader, LoadingState } from '@/components/shared';
 import { Button } from '@/components/ui/button';
+import { authenticatedFetch as fetch } from '@/lib/authenticated-fetch';
 
 interface CreditWallet {
   walletId: string;

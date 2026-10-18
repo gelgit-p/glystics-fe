@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
+import { authenticatedFetch as fetch } from '@/lib/authenticated-fetch';
+import { toast } from 'sonner';
 import {
   Menu,
   Search,
@@ -52,7 +54,7 @@ export function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
     queryKey: ['user-details', userId],
     queryFn: async () => {
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/auth/${encodeURIComponent(userId)}`,
+        `${import.meta.env.VITE_API_URL}/auth/me`,
         { headers: { accept: '*/*' } },
       );
       if (!response.ok) {
@@ -91,11 +93,19 @@ export function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
       .map((part) => part[0]?.toUpperCase() ?? '')
       .join('') || 'A';
 
-  const signOut = () => {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('userId');
-    navigate('/login');
+  const signOut = async () => {
+    try {
+      await fetch(`${import.meta.env.VITE_API_URL}/auth/logout`, {
+        method: 'POST',
+      });
+    } catch {
+      toast.error('The session could not be invalidated on the server.');
+    } finally {
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('userId');
+      navigate('/login');
+    }
   };
 
   const getPageTitle = () => {

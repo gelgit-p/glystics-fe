@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { authenticatedFetch as fetch } from '@/lib/authenticated-fetch';
 import {
   Search,
   Send,
@@ -96,7 +97,7 @@ export default function NotificationsPage() {
         throw new Error('Logged-in user ID not found.');
       }
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/notifications/${encodeURIComponent(userId)}`,
+        `${import.meta.env.VITE_API_URL}/notifications`,
         { headers: { accept: '*/*' } },
       );
       if (!response.ok) {

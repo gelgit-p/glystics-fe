@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { authenticatedFetch as fetch } from '@/lib/authenticated-fetch';
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -1121,7 +1122,7 @@ const {
     }
 
     const response = await fetch(
-      `${import.meta.env.VITE_API_URL}/auth/${encodeURIComponent(userId)}`,
+      `${import.meta.env.VITE_API_URL}/auth/me`,
       {
         method: 'GET',
         headers: {

@@ -18,6 +18,7 @@ import {
   organizations,
 } from './mock-data';
 import type { Delivery, Template, Automation } from '@/types';
+import { authenticatedFetch as fetch } from '@/lib/authenticated-fetch';
 
 function delay<T>(data: T, ms = 300): Promise<T> {
   return new Promise((resolve) => setTimeout(() => resolve(data), ms));

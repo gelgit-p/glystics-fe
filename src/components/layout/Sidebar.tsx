@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
+import { authenticatedFetch as fetch } from '@/lib/authenticated-fetch';
 
 function useCreditAccess() {
   const userId = localStorage.getItem('userId') ?? '';

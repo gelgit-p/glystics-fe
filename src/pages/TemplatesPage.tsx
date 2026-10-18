@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { authenticatedFetch as fetch } from '@/lib/authenticated-fetch';
 
 import {
   Plus,
@@ -723,7 +724,7 @@ const { data: selectedWabaId } = useQuery<string>({
     }
 
     const response = await fetch(
-      `${import.meta.env.VITE_API_URL}/auth/${encodeURIComponent(userId)}`,
+      `${import.meta.env.VITE_API_URL}/auth/me`,
       {
         method: 'GET',
         headers: { accept: '*/*' },

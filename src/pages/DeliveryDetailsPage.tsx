@@ -1,6 +1,7 @@
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { authenticatedFetch as fetch } from '@/lib/authenticated-fetch';
 import {
   ArrowLeft,
   Send,

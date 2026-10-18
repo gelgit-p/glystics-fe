@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { authenticatedFetch as fetch } from '@/lib/authenticated-fetch';
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 

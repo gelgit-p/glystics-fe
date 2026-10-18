@@ -22,6 +22,7 @@ import {
 } from 'recharts';
 import { Link } from 'react-router-dom';
 import { api } from '@/lib/api';
+import { authenticatedFetch as fetch } from '@/lib/authenticated-fetch';
 import { deliveryActivityData, currentUser } from '@/lib/mock-data';
 import { LoadingState, StatusBadge } from '@/components/shared';
 import {
