@@ -369,14 +369,14 @@ export default function BillingPage() {
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Coins className="h-4 w-4 text-primary" /> Available credits
               </div>
-              <p className="mt-3 text-3xl font-bold">{walletQuery.data.balance.toLocaleString()}</p>
+              <p className="mt-3 text-3xl font-bold">{walletQuery.data.balance}</p>
               <p className="mt-1 text-xs text-muted-foreground">Business wallet balance</p>
             </div>
             <div className="rounded-xl border border-border bg-card p-5">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Sparkles className="h-4 w-4 text-amber-500" /> Reward points
               </div>
-              <p className="mt-3 text-3xl font-bold">{walletQuery.data.points.toLocaleString()}</p>
+              <p className="mt-3 text-3xl font-bold">{walletQuery.data.points}</p>
               <p className="mt-1 text-xs text-muted-foreground">
                 1 point for each purchased credit
               </p>
@@ -385,7 +385,7 @@ export default function BillingPage() {
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <ArrowUpRight className="h-4 w-4 text-orange-600" /> Used this month
               </div>
-              <p className="mt-3 text-3xl font-bold">{walletQuery.data.creditsUsedThisMonth.toLocaleString()}</p>
+              <p className="mt-3 text-3xl font-bold">{walletQuery.data.creditsUsedThisMonth}</p>
               <p className="mt-1 text-xs text-muted-foreground">Delivery and WhatsApp charges</p>
             </div>
             <div className="rounded-xl border border-border bg-card p-5">
@@ -452,12 +452,12 @@ export default function BillingPage() {
                 <h3 className="font-semibold">{offer.name}</h3>
                 <p className="mt-2 text-2xl font-bold">{formatNaira(offer.priceKobo)}</p>
                 <div className="mt-4 flex items-baseline gap-1">
-                  <span className="text-xl font-semibold">{offer.credits.toLocaleString()}</span>
+                  <span className="text-xl font-semibold">{offer.credits}</span>
                   <span className="text-sm text-muted-foreground">credits</span>
                 </div>
                 {offer.bonusCredits > 0 ? (
                   <p className="mt-1 text-sm font-medium text-emerald-700 dark:text-emerald-400">
-                    +{offer.bonusCredits.toLocaleString()} bonus credits
+                    +{offer.bonusCredits} bonus credits
                   </p>
                 ) : (
                   <p className="mt-1 text-sm text-muted-foreground">No bonus credits</p>
@@ -515,7 +515,7 @@ export default function BillingPage() {
                   </div>
                   <div className="text-right">
                     <p className={`text-sm font-semibold ${transaction.amount < 0 ? 'text-orange-700 dark:text-orange-400' : 'text-emerald-700 dark:text-emerald-400'}`}>
-                      {transaction.amount > 0 ? '+' : ''}{transaction.amount.toLocaleString()}
+                      {transaction.amount > 0 ? '+' : ''}{transaction.amount}
                     </p>
                     <p className="text-xs text-muted-foreground">Balance {transaction.balanceAfter.toLocaleString()}</p>
                   </div>
