@@ -13,7 +13,9 @@ import {
   ChevronRight,
   MapPin,
   Smartphone,
+  Coins,
 } from 'lucide-react';
+import { CREDIT_PACKAGE_OFFERS, formatNaira } from '@/lib/credit-packages';
 
 const features = [
   { icon: Bell, title: 'Automated delivery notifications', desc: 'Trigger WhatsApp messages automatically at every stage of the delivery journey.' },
@@ -29,6 +31,10 @@ const features = [
 const workflow = ['Order Created', 'Pickup Scheduled', 'Rider Assigned', 'Picked Up', 'In Transit', 'Out for Delivery', 'Delivered'];
 
 export default function LandingPage() {
+  const buyCreditsPath = localStorage.getItem('accessToken')
+    ? '/billing'
+    : '/register';
+
   return (
     <div className="min-h-screen bg-white">
       {/* Nav */}
@@ -44,6 +50,7 @@ export default function LandingPage() {
             <a href="#features" className="text-sm font-medium text-muted-foreground hover:text-foreground">Features</a>
             <a href="#how-it-works" className="text-sm font-medium text-muted-foreground hover:text-foreground">How it works</a>
             <a href="#workflow" className="text-sm font-medium text-muted-foreground hover:text-foreground">Workflow</a>
+            <a href="#pricing" className="text-sm font-medium text-muted-foreground hover:text-foreground">Pricing</a>
             <Link to="/login" className="text-sm font-medium text-muted-foreground hover:text-foreground">Sign in</Link>
           </div>
           <Link
@@ -192,6 +199,52 @@ export default function LandingPage() {
                 <h3 className="mb-2 font-semibold">{f.title}</h3>
                 <p className="text-sm text-muted-foreground">{f.desc}</p>
               </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Credit pricing */}
+      <section id="pricing" className="border-t border-border bg-muted/30 py-20">
+        <div className="mx-auto max-w-7xl px-4 lg:px-8">
+          <div className="mx-auto mb-12 max-w-2xl text-center">
+            <h2 className="text-3xl font-bold tracking-tight">Simple credit pricing</h2>
+            <p className="mt-3 text-muted-foreground">
+              Choose a credit package to get started. Pay securely at checkout, then use credits for deliveries and WhatsApp notifications.
+            </p>
+          </div>
+          <div className="mx-auto grid max-w-5xl gap-5 md:grid-cols-3">
+            {CREDIT_PACKAGE_OFFERS.map((offer) => (
+              <article
+                key={offer.name}
+                className={`flex flex-col rounded-xl border bg-white p-6 shadow-sm ${
+                  offer.name === 'Growth'
+                    ? 'border-primary ring-1 ring-primary'
+                    : 'border-border'
+                }`}
+              >
+                {offer.name === 'Growth' && (
+                  <span className="mb-3 w-fit rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                    Popular
+                  </span>
+                )}
+                <h3 className="text-lg font-semibold">{offer.name}</h3>
+                <p className="mt-4 text-3xl font-bold">{formatNaira(offer.priceKobo)}</p>
+                <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
+                  <Coins className="h-4 w-4 text-primary" />
+                  {offer.credits.toLocaleString()} credits
+                </div>
+                <p className="mt-5 text-sm text-muted-foreground">
+                  One-time purchase. Credits are added after payment is confirmed.
+                </p>
+                <Link
+                  to={buyCreditsPath}
+                  className="mt-6 inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+                >
+                  Buy credits to get started
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </article>
             ))}
           </div>
         </div>

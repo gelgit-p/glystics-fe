@@ -15,6 +15,7 @@ import {
 import { PageHeader, LoadingState } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { authenticatedFetch as fetch } from '@/lib/authenticated-fetch';
+import { CREDIT_PACKAGE_OFFERS, formatNaira } from '@/lib/credit-packages';
 
 interface CreditWallet {
   walletId: string;
@@ -33,12 +34,6 @@ interface CreditPackage {
   credits: number;
   bonusCredits: number;
 }
-
-const CREDIT_PACKAGE_OFFERS = [
-  { name: 'Starter', priceKobo: 50_000, credits: 50, bonusCredits: 0 },
-  { name: 'Growth', priceKobo: 200_000, credits: 220, bonusCredits: 0 },
-  { name: 'Business', priceKobo: 500_000, credits: 600, bonusCredits: 0 },
-] as const;
 
 interface CreditTransaction {
   id: string;
@@ -85,14 +80,6 @@ async function readError(response: Response, fallback: string) {
   return new Error(
     message || `${fallback}: ${response.status} ${response.statusText}`,
   );
-}
-
-function formatNaira(kobo: number) {
-  return new Intl.NumberFormat('en-NG', {
-    style: 'currency',
-    currency: 'NGN',
-    maximumFractionDigits: 2,
-  }).format(kobo / 100);
 }
 
 export default function BillingPage() {
