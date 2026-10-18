@@ -1,25 +1,141 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { User, Mail, Phone, Building2 } from 'lucide-react';
+import { User, Mail, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { currentUser } from '@/lib/mock-data';
+
+interface UserProfile {
+  fullName: string;
+  email: string;
+  businessName: string;
+}
 
 export default function ProfileSettingsPage() {
+  const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
-  const [name, setName] = useState(currentUser.name);
-  const [email, setEmail] = useState(currentUser.email);
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [businessName, setBusinessName] = useState('');
+  const userId = localStorage.getItem('userId') ?? '';
+  const { data: user, isLoading, isError, error } = useQuery<UserProfile>({
+    queryKey: ['user-details', userId],
+    queryFn: async () => {
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/auth/${encodeURIComponent(userId)}`,
+        { headers: { accept: '*/*' } },
+      );
+      if (!response.ok) {
+        throw new Error(
+          `Failed to fetch profile: ${response.status} ${response.statusText}`,
+        );
+      }
+
+      const result: unknown = await response.json();
+      if (
+        typeof result !== 'object' ||
+        result === null ||
+        !('fullName' in result) ||
+        typeof result.fullName !== 'string' ||
+        !('email' in result) ||
+        typeof result.email !== 'string' ||
+        !('businessName' in result) ||
+        typeof result.businessName !== 'string'
+      ) {
+        throw new Error('The profile response is invalid');
+      }
+      return {
+        fullName: result.fullName,
+        email: result.email,
+        businessName: result.businessName,
+      };
+    },
+    enabled: Boolean(userId),
+  });
+
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+    setName(user.fullName);
+    setEmail(user.email);
+    setBusinessName(user.businessName);
+  }, [user]);
+
+  const initials =
+    name
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() ?? '')
+      .join('') || 'A';
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!userId) {
+      toast.error('Logged-in user ID not found');
+      return;
+    }
+    if (!name.trim() || !email.trim() || !businessName.trim()) {
+      toast.error('Name, email, and business name are required');
+      return;
+    }
+
     setSaving(true);
-    await new Promise((r) => setTimeout(r, 600));
-    setSaving(false);
-    toast.success('Profile updated successfully');
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/auth/update-user/${encodeURIComponent(userId)}`,
+        {
+          method: 'POST',
+          headers: {
+            accept: '*/*',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            fullName: name.trim(),
+            email: email.trim(),
+            businessName: businessName.trim(),
+          }),
+        },
+      );
+      if (!response.ok) {
+        const result = await response.json().catch(() => null);
+        throw new Error(
+          result?.message ||
+            `Failed to update profile: ${response.status} ${response.statusText}`,
+        );
+      }
+
+      const updatedUser = await response.json() as UserProfile;
+      queryClient.setQueryData(['user-details', userId], {
+        fullName: updatedUser.fullName || name.trim(),
+        email: updatedUser.email || email.trim(),
+        businessName: updatedUser.businessName || businessName.trim(),
+      });
+      toast.success('Profile updated successfully');
+    } catch (saveError) {
+      toast.error(
+        saveError instanceof Error
+          ? saveError.message
+          : 'Failed to update profile',
+      );
+    } finally {
+      setSaving(false);
+    }
   };
+
+  if (isLoading) {
+    return <p className="text-sm text-muted-foreground">Loading profile...</p>;
+  }
+  if (isError) {
+    return (
+      <p className="text-sm text-destructive">
+        {error instanceof Error ? error.message : 'Failed to load profile'}
+      </p>
+    );
+  }
 
   return (
     <div className="max-w-2xl">
@@ -29,7 +145,7 @@ export default function ProfileSettingsPage() {
 
         <div className="mb-6 flex items-center gap-4">
           <Avatar className="h-16 w-16">
-            <AvatarFallback className="bg-primary text-lg font-semibold text-primary-foreground">{currentUser.avatar}</AvatarFallback>
+            <AvatarFallback className="bg-primary text-lg font-semibold text-primary-foreground">{initials}</AvatarFallback>
           </Avatar>
           <div>
             <Button variant="outline" size="sm" onClick={() => toast.info('Upload coming soon')}>Change Avatar</Button>
@@ -54,23 +170,12 @@ export default function ProfileSettingsPage() {
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="phone">Phone</Label>
-              <div className="relative">
-                <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input id="phone" defaultValue="+234 801 234 5678" className="pl-9" />
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="org">Organization</Label>
+              <Label htmlFor="businessName">Business name</Label>
               <div className="relative">
                 <Building2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input id="org" defaultValue={currentUser.organization} className="pl-9" />
+                <Input id="businessName" value={businessName} onChange={(e) => setBusinessName(e.target.value)} className="pl-9" />
               </div>
             </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="bio">Bio</Label>
-            <Textarea id="bio" rows={3} placeholder="Tell us about yourself..." />
           </div>
           <div className="flex justify-end">
             <Button type="submit" disabled={saving}>{saving ? 'Saving...' : 'Save Changes'}</Button>

@@ -1,16 +1,15 @@
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import {
   Menu,
   Search,
   Bell,
   HelpCircle,
-  ChevronDown,
   LogOut,
   User,
   Settings as SettingsIcon,
   Building2,
-  Check,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -22,7 +21,12 @@ import {
 import { Avatar,
   AvatarFallback,
 } from '@/components/ui/avatar';
-import { currentUser, organizations } from '@/lib/mock-data';
+
+interface UserDetails {
+  fullName: string;
+  email: string;
+  businessName: string;
+}
 
 const pageTitles: Record<string, string> = {
   '/dashboard': 'Dashboard',
@@ -42,8 +46,57 @@ const pageTitles: Record<string, string> = {
 
 export function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
   const navigate = useNavigate();
-  const [org, setOrg] = useState(organizations[0]);
   const [search, setSearch] = useState('');
+  const userId = localStorage.getItem('userId') ?? '';
+  const { data: user } = useQuery<UserDetails>({
+    queryKey: ['user-details', userId],
+    queryFn: async () => {
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/auth/${encodeURIComponent(userId)}`,
+        { headers: { accept: '*/*' } },
+      );
+      if (!response.ok) {
+        throw new Error(
+          `Failed to fetch profile: ${response.status} ${response.statusText}`,
+        );
+      }
+      const data: unknown = await response.json();
+      if (
+        typeof data !== 'object' ||
+        data === null ||
+        !('fullName' in data) ||
+        typeof data.fullName !== 'string' ||
+        !('email' in data) ||
+        typeof data.email !== 'string' ||
+        !('businessName' in data) ||
+        typeof data.businessName !== 'string'
+      ) {
+        throw new Error('The profile response is invalid');
+      }
+      return {
+        fullName: data.fullName,
+        email: data.email,
+        businessName: data.businessName,
+      };
+    },
+    enabled: Boolean(userId),
+    staleTime: 30_000,
+  });
+  const fullName = user?.fullName || 'Account';
+  const initials =
+    fullName
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() ?? '')
+      .join('') || 'A';
+
+  const signOut = () => {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('userId');
+    navigate('/login');
+  };
 
   const getPageTitle = () => {
     const path = window.location.pathname;
@@ -72,27 +125,10 @@ export function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
       </div>
 
       <div className="ml-auto flex items-center gap-1 md:ml-3">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-2 rounded-lg border border-border px-2.5 py-1.5 text-sm font-medium hover:bg-muted">
-              <Building2 className="h-4 w-4 text-muted-foreground" />
-              <span className="hidden sm:inline">{org.name}</span>
-              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            {organizations.map((o) => (
-              <DropdownMenuItem key={o.id} onClick={() => setOrg(o)} className="cursor-pointer">
-                <Building2 className="mr-2 h-4 w-4" />
-                <div className="flex flex-1 flex-col">
-                  <span className="text-sm">{o.name}</span>
-                  <span className="text-xs text-muted-foreground">{o.plan} Plan</span>
-                </div>
-                {org.id === o.id && <Check className="h-4 w-4 text-primary" />}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="hidden max-w-56 items-center gap-2 rounded-lg border border-border px-2.5 py-1.5 text-sm font-medium sm:flex">
+          <Building2 className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <span className="truncate">{user?.businessName || 'Business'}</span>
+        </div>
 
         <button className="relative rounded-lg p-2 text-muted-foreground hover:bg-muted">
           <Bell className="h-[18px] w-[18px]" />
@@ -108,15 +144,16 @@ export function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
             <button className="ml-1 rounded-full">
               <Avatar className="h-8 w-8 border border-border">
                 <AvatarFallback className="bg-primary text-xs font-semibold text-primary-foreground">
-                  {currentUser.avatar}
+                  {initials}
                 </AvatarFallback>
               </Avatar>
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <div className="px-2 py-1.5">
-              <p className="text-sm font-semibold">{currentUser.name}</p>
-              <p className="truncate text-xs text-muted-foreground">{currentUser.email}</p>
+              <p className="text-sm font-semibold">{fullName}</p>
+              <p className="truncate text-xs text-muted-foreground">{user?.email || ''}</p>
+              <p className="truncate text-xs text-muted-foreground">{user?.businessName || ''}</p>
             </div>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => navigate('/settings/profile')} className="cursor-pointer">
@@ -126,7 +163,7 @@ export function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
               <SettingsIcon className="mr-2 h-4 w-4" /> Settings
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => navigate('/login')} className="cursor-pointer text-red-600 focus:text-red-600">
+            <DropdownMenuItem onClick={signOut} className="cursor-pointer text-red-600 focus:text-red-600">
               <LogOut className="mr-2 h-4 w-4" /> Sign out
             </DropdownMenuItem>
           </DropdownMenuContent>
