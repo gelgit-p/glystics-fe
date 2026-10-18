@@ -16,6 +16,7 @@ import {
   MoreHorizontal,
   Package,
   Plus,
+  RotateCw,
   Search,
   Send,
   Star,
@@ -560,6 +561,7 @@ export default function DeliveriesPage() {
   const [checkoutDialogOpen, setCheckoutDialogOpen] = useState(false);
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
   const [checkoutTrackingId, setCheckoutTrackingId] = useState<string | null>(null);
+  const [regeneratingDeliveryId, setRegeneratingDeliveryId] = useState<string | null>(null);
 
   const [insuranceDialogOpen, setInsuranceDialogOpen] = useState(false);
 
@@ -930,6 +932,57 @@ export default function DeliveriesPage() {
 
     if (!open) {
       resetDeliveryDialog();
+    }
+  };
+
+  const handleRegeneratePaymentLink = async (id: string) => {
+    setRegeneratingDeliveryId(id);
+
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/delivery/${encodeURIComponent(id)}/checkout-session/regenerate`,
+        {
+          method: 'POST',
+          headers: { accept: '*/*' },
+        },
+      );
+      const result: unknown = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        const message =
+          typeof result === 'object' &&
+          result !== null &&
+          'message' in result
+            ? result.message
+            : undefined;
+        throw new Error(
+          typeof message === 'string'
+            ? message
+            : 'Unable to generate a new payment link.',
+        );
+      }
+
+      if (
+        typeof result !== 'object' ||
+        result === null ||
+        !('checkout_url' in result) ||
+        typeof result.checkout_url !== 'string' ||
+        !result.checkout_url.startsWith('https://')
+      ) {
+        throw new Error('The server returned an invalid payment link.');
+      }
+
+      await queryClient.invalidateQueries({ queryKey: ['deliveries'] });
+      toast.success('A new payment link is ready.');
+    } catch (error) {
+      console.error('Delivery payment link regeneration failed:', error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : 'Unable to generate a new payment link.',
+      );
+    } finally {
+      setRegeneratingDeliveryId(null);
     }
   };
 
@@ -3340,16 +3393,45 @@ export default function DeliveriesPage() {
                     </TableCell>
 
                     <TableCell>
-                      {delivery.isPaymentPending && delivery.checkoutUrl ? (
-                        <a
-                          href={delivery.checkoutUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
-                        >
-                          Complete payment
-                          <ExternalLink className="h-3.5 w-3.5" />
-                        </a>
+                      {delivery.isPaymentPending ? (
+                        <div className="flex flex-col items-start gap-1">
+                          {delivery.checkoutUrl ? (
+                            <a
+                              href={delivery.checkoutUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+                            >
+                              Complete payment
+                              <ExternalLink className="h-3.5 w-3.5" />
+                            </a>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">
+                              Payment link unavailable
+                            </span>
+                          )}
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-1.5 text-xs"
+                            disabled={regeneratingDeliveryId !== null}
+                            onClick={() =>
+                              void handleRegeneratePaymentLink(delivery.id)
+                            }
+                          >
+                            <RotateCw
+                              className={`mr-1 h-3 w-3 ${
+                                regeneratingDeliveryId === delivery.id
+                                  ? 'animate-spin'
+                                  : ''
+                              }`}
+                            />
+                            {regeneratingDeliveryId === delivery.id
+                              ? 'Generating...'
+                              : 'Regenerate link'}
+                          </Button>
+                        </div>
                       ) : (
                         <span className="text-sm text-muted-foreground">—</span>
                       )}
