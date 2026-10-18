@@ -7,8 +7,6 @@ import {
   XCircle,
   MessageCircle,
   Send,
-  Mail,
-  MailOpen,
   ArrowRight,
   TrendingUp,
 } from 'lucide-react';
@@ -24,7 +22,7 @@ import {
 } from 'recharts';
 import { Link } from 'react-router-dom';
 import { api } from '@/lib/api';
-import { dashboardStats, deliveryActivityData, currentUser } from '@/lib/mock-data';
+import { deliveryActivityData, currentUser } from '@/lib/mock-data';
 import { LoadingState, StatusBadge } from '@/components/shared';
 import {
   Table,
@@ -38,6 +36,16 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 const timeFilters = ['Today', '7 days', '30 days', '90 days'];
+
+interface DashboardAnalytics {
+  total_deliveries: number;
+  delivered: number;
+  in_transit: number;
+  failed: number;
+  whatsapp_messages: number;
+  whatsapp_delivered: number;
+  whatsapp_failed: number;
+}
 
 function StatCard({
   label,
@@ -77,8 +85,28 @@ export default function DashboardPage() {
     queryKey: ['deliveries', { limit: 6 }],
     queryFn: () => api.getDeliveries(),
   });
+  const analyticsQuery = useQuery<DashboardAnalytics>({
+    queryKey: ['dashboard-analytics'],
+    queryFn: async () => {
+      const accessToken = localStorage.getItem('accessToken');
+      if (!accessToken) {
+        throw new Error('Please sign in again to load dashboard analytics.');
+      }
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/delivery/analytics`,
+        { headers: { Authorization: `Bearer ${accessToken}` } },
+      );
+      if (!response.ok) {
+        throw new Error(`Could not load dashboard analytics (${response.status}).`);
+      }
+      return response.json() as Promise<DashboardAnalytics>;
+    },
+  });
 
   const recent = deliveries?.slice(0, 6) ?? [];
+  const stats = analyticsQuery.data;
+  const statValue = (value?: number) =>
+    analyticsQuery.isLoading ? '—' : (value ?? 0).toLocaleString();
 
   return (
     <div className="space-y-6">
@@ -90,19 +118,25 @@ export default function DashboardPage() {
 
       {/* Delivery stats */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Total Deliveries" value={dashboardStats.totalDeliveries.toLocaleString()} icon={Package} iconClass="bg-blue-50 text-blue-600 dark:bg-blue-950" />
-        <StatCard label="Delivered" value={dashboardStats.delivered.toLocaleString()} icon={CheckCircle} trend="+12.5%" iconClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-950" />
-        <StatCard label="In Transit" value={dashboardStats.inTransit.toLocaleString()} icon={Truck} iconClass="bg-amber-50 text-amber-600 dark:bg-amber-950" />
-        <StatCard label="Failed" value={dashboardStats.failed.toLocaleString()} icon={XCircle} iconClass="bg-red-50 text-red-600 dark:bg-red-950" />
+        <StatCard label="Total Deliveries" value={statValue(stats?.total_deliveries)} icon={Package} iconClass="bg-blue-50 text-blue-600 dark:bg-blue-950" />
+        <StatCard label="Delivered" value={statValue(stats?.delivered)} icon={CheckCircle} iconClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-950" />
+        <StatCard label="In Transit" value={statValue(stats?.in_transit)} icon={Truck} iconClass="bg-amber-50 text-amber-600 dark:bg-amber-950" />
+        <StatCard label="Failed" value={statValue(stats?.failed)} icon={XCircle} iconClass="bg-red-50 text-red-600 dark:bg-red-950" />
       </div>
 
       {/* WhatsApp stats */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="WhatsApp Messages" value={dashboardStats.whatsappMessages.toLocaleString()} icon={MessageCircle} iconClass="bg-primary/10 text-primary" />
-        <StatCard label="Delivered" value={dashboardStats.whatsappDelivered.toLocaleString()} icon={Send} iconClass="bg-blue-50 text-blue-600 dark:bg-blue-950" />
-        <StatCard label="Read" value={dashboardStats.whatsappRead.toLocaleString()} icon={MailOpen} iconClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-950" />
-        <StatCard label="Failed" value={dashboardStats.whatsappFailed.toLocaleString()} icon={XCircle} iconClass="bg-red-50 text-red-600 dark:bg-red-950" />
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+        <StatCard label="WhatsApp Messages" value={statValue(stats?.whatsapp_messages)} icon={MessageCircle} iconClass="bg-primary/10 text-primary" />
+        <StatCard label="Delivered (sent)" value={statValue(stats?.whatsapp_delivered)} icon={Send} iconClass="bg-blue-50 text-blue-600 dark:bg-blue-950" />
+        <StatCard label="Failed" value={statValue(stats?.whatsapp_failed)} icon={XCircle} iconClass="bg-red-50 text-red-600 dark:bg-red-950" />
       </div>
+      {analyticsQuery.isError && (
+        <p role="alert" className="text-sm text-destructive">
+          {analyticsQuery.error instanceof Error
+            ? analyticsQuery.error.message
+            : 'Dashboard analytics could not be loaded.'}
+        </p>
+      )}
 
       {/* Chart */}
       <div className="rounded-xl border border-border bg-card p-6">
