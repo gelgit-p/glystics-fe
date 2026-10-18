@@ -28,6 +28,7 @@ interface CreditWallet {
   walletId: string;
   businessName: string;
   balance: number;
+  points: number;
   creditsUsedThisMonth: number;
   hasPurchasedCredits: boolean;
   lowBalance: boolean;
@@ -363,13 +364,22 @@ export default function BillingPage() {
         </div>
       ) : walletQuery.data ? (
         <>
-          <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <div className="rounded-xl border border-border bg-card p-5">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Coins className="h-4 w-4 text-primary" /> Available credits
               </div>
               <p className="mt-3 text-3xl font-bold">{walletQuery.data.balance.toLocaleString()}</p>
               <p className="mt-1 text-xs text-muted-foreground">Business wallet balance</p>
+            </div>
+            <div className="rounded-xl border border-border bg-card p-5">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Sparkles className="h-4 w-4 text-amber-500" /> Reward points
+              </div>
+              <p className="mt-3 text-3xl font-bold">{walletQuery.data.points.toLocaleString()}</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                1 point for each purchased credit
+              </p>
             </div>
             <div className="rounded-xl border border-border bg-card p-5">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
