@@ -61,6 +61,11 @@ interface PurchaseResult {
   purchase: { paymentReference: string };
 }
 
+interface PaymentVerificationResult {
+  status: 'PENDING' | 'PAID' | 'FAILED' | 'CANCELLED';
+  credited: boolean;
+}
+
 interface ApiError {
   message?: string | string[];
 }
@@ -176,31 +181,85 @@ export default function BillingPage() {
     },
   });
 
-  const verifyMutation = useMutation({
-    mutationFn: async (reference: string) => {
+  const paymentStatusQuery = useQuery<PaymentVerificationResult>({
+    queryKey: ['credit-purchase-status', verificationReference],
+    enabled: checkoutUrl !== null && Boolean(verificationReference),
+    queryFn: async () => {
+      if (!verificationReference) {
+        throw new Error('Credit purchase reference is missing.');
+      }
       const response = await fetch(
-        `${apiUrl}/credits/purchases/${encodeURIComponent(reference)}/verify`,
+        `${apiUrl}/credits/purchases/${encodeURIComponent(verificationReference)}/verify`,
         { method: 'POST', headers: authHeaders() },
       );
       if (!response.ok) {
-        throw await readError(response, 'Payment has not been confirmed');
+        throw await readError(response, 'Unable to check payment status');
       }
-      return response.json();
+      const result: unknown = await response.json();
+      if (
+        typeof result !== 'object' ||
+        result === null ||
+        !('status' in result) ||
+        !['PENDING', 'PAID', 'FAILED', 'CANCELLED'].includes(
+          String(result.status),
+        ) ||
+        !('credited' in result) ||
+        typeof result.credited !== 'boolean'
+      ) {
+        throw new Error('Invalid payment status received from the server.');
+      }
+      return result as PaymentVerificationResult;
     },
-    onSuccess: async () => {
-      localStorage.removeItem('pendingCreditReference');
-      setVerificationReference('');
-      setSearchParams({});
-      await Promise.all([
+    refetchInterval: (query) =>
+      !query.state.data || query.state.data.status === 'PENDING'
+        ? 5000
+        : false,
+    retry: false,
+  });
+
+  useEffect(() => {
+    const status = paymentStatusQuery.data?.status;
+    if (status !== 'PAID' && status !== 'FAILED' && status !== 'CANCELLED') {
+      return;
+    }
+
+    localStorage.removeItem('pendingCreditReference');
+    setVerificationReference('');
+    setCheckoutUrl(null);
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      next.delete('credit_reference');
+      next.delete('reference');
+      return next;
+    });
+
+    if (status === 'PAID') {
+      void Promise.all([
         queryClient.invalidateQueries({ queryKey: ['credit-wallet', userId] }),
         queryClient.invalidateQueries({ queryKey: ['credit-transactions', userId] }),
       ]);
       toast.success('Payment confirmed. Credits have been added to your wallet.');
-    },
-    onError: (error) => {
-      toast.error(error instanceof Error ? error.message : 'Payment verification failed');
-    },
-  });
+    } else {
+      toast.error(
+        status === 'CANCELLED'
+          ? 'Credit payment was cancelled or expired.'
+          : 'Credit payment failed. Please try again or choose another package.',
+      );
+    }
+  }, [paymentStatusQuery.data?.status, queryClient, setSearchParams, userId]);
+
+  const handleVerifyPayment = async () => {
+    const result = await paymentStatusQuery.refetch();
+    if (result.error) {
+      toast.error(
+        result.error instanceof Error
+          ? result.error.message
+          : 'Payment verification failed',
+      );
+    } else if (result.data?.status === 'PENDING') {
+      toast.info('Payment has not been confirmed yet. We will keep checking.');
+    }
+  };
 
   useEffect(() => {
     const returnedReference =
@@ -251,6 +310,25 @@ export default function BillingPage() {
                   <ExternalLink className="ml-2 h-4 w-4" />
                 </a>
               </Button>
+              <div
+                aria-live="polite"
+                className="flex items-center gap-2 text-sm text-muted-foreground"
+              >
+                {paymentStatusQuery.isError ? (
+                  <>
+                    <AlertTriangle className="h-4 w-4 text-amber-600" />
+                    Payment status could not be checked. We will retry while
+                    this dialog stays open.
+                  </>
+                ) : (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    {paymentStatusQuery.data?.status === 'PENDING'
+                      ? 'Waiting for payment confirmation...'
+                      : 'Checking payment status...'}
+                  </>
+                )}
+              </div>
             </div>
           )}
         </DialogContent>
@@ -329,10 +407,10 @@ export default function BillingPage() {
             <p className="mt-1 break-all font-mono text-xs text-muted-foreground">{verificationReference}</p>
           </div>
           <Button
-            onClick={() => verifyMutation.mutate(verificationReference)}
-            disabled={verifyMutation.isPending}
+            onClick={() => void handleVerifyPayment()}
+            disabled={paymentStatusQuery.isFetching}
           >
-            {verifyMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+            {paymentStatusQuery.isFetching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
             Verify payment
           </Button>
         </section>
