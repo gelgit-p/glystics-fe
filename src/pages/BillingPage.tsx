@@ -376,7 +376,9 @@ export default function BillingPage() {
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Sparkles className="h-4 w-4 text-amber-500" /> Reward points
               </div>
-              <p className="mt-3 text-3xl font-bold">{walletQuery.data.points}</p>
+              <p className="mt-3 text-3xl font-bold">
+                {walletQuery.data.points.toLocaleString()}
+              </p>
               <p className="mt-1 text-xs text-muted-foreground">
                 1 point for each purchased credit
               </p>
