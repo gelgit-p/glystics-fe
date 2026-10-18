@@ -23,6 +23,81 @@ function delay<T>(data: T, ms = 300): Promise<T> {
   return new Promise((resolve) => setTimeout(() => resolve(data), ms));
 }
 
+interface BackendDelivery {
+  id: string;
+  trackingId: string;
+  senderName: string;
+  senderPhone: string;
+  senderAddress: string;
+  receiverName: string;
+  receiverPhone: string;
+  receiverAddress: string;
+  packageName: string;
+  packageCategory: string;
+  packageWeight: string;
+  packageDimensions: string;
+  packageValue: string;
+  pickupDate: string;
+  courier_name: string | null;
+  deliveryStatus: string | null;
+  deliveryType: string;
+  deliveryInstructions: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+function toDeliveryStatus(status: string | null): Delivery['status'] {
+  switch (status?.trim().toUpperCase().replace(/[\s-]+/g, '_')) {
+    case 'PICKUP_SCHEDULED':
+      return 'Pickup Scheduled';
+    case 'PICKED_UP':
+      return 'Picked Up';
+    case 'IN_TRANSIT':
+    case 'TRANSIT':
+      return 'In Transit';
+    case 'OUT_FOR_DELIVERY':
+      return 'Out for Delivery';
+    case 'DELIVERED':
+      return 'Delivered';
+    case 'FAILED':
+    case 'BOOKING_FAILED':
+    case 'CANCELLED':
+    case 'CANCELED':
+      return 'Failed';
+    default:
+      return 'Created';
+  }
+}
+
+function toFrontendDelivery(record: BackendDelivery): Delivery {
+  return {
+    id: record.id,
+    trackingId: record.trackingId,
+    senderName: record.senderName,
+    senderPhone: record.senderPhone,
+    senderAddress: record.senderAddress,
+    receiverName: record.receiverName,
+    receiverPhone: record.receiverPhone,
+    receiverAddress: record.receiverAddress,
+    packageName: record.packageName,
+    category: record.packageCategory,
+    weight: record.packageWeight,
+    dimensions: record.packageDimensions,
+    value: record.packageValue,
+    pickupDate: record.pickupDate,
+    deliveryType: record.deliveryType,
+    courier: record.courier_name ?? '',
+    instructions: record.deliveryInstructions ?? '',
+    status: toDeliveryStatus(record.deliveryStatus),
+    createdAt: record.createdAt,
+    updatedAt: record.updatedAt,
+    origin: record.senderAddress,
+    destination: record.receiverAddress,
+    timeline: [],
+    notifications: [],
+  };
+}
+
 // In-memory WhatsApp connection state. Starts disconnected and changes only
 // through connectWhatsApp / disconnectWhatsApp below.
 type WhatsAppConnection = typeof whatsappConnection;
@@ -36,8 +111,38 @@ export const api = {
   getDeliveryActivity: (range: string = '7days') => delay(deliveryActivityData),
 
   // Deliveries
-  getDeliveries: (filters?: { search?: string; status?: string; courier?: string }) => {
-    let result = [...mockDeliveries];
+  getDeliveries: async (filters?: { search?: string; status?: string; courier?: string }) => {
+    const userId = localStorage.getItem('userId');
+    if (!userId) {
+      throw new Error('Could not load deliveries: logged-in user ID is missing.');
+    }
+
+    const headers: HeadersInit = { accept: '*/*' };
+    const accessToken = localStorage.getItem('accessToken');
+    if (accessToken) {
+      headers.Authorization = `Bearer ${accessToken}`;
+    }
+    const response = await fetch(
+      `${import.meta.env.VITE_API_URL}/delivery/${encodeURIComponent(userId)}`,
+      { headers },
+    );
+    if (!response.ok) {
+      throw new Error(
+        `Could not load deliveries: ${response.status} ${response.statusText}`,
+      );
+    }
+
+    const body: unknown = await response.json();
+    if (!Array.isArray(body)) {
+      throw new Error('Could not load deliveries: API returned an invalid response.');
+    }
+
+    let result = body.map((record: unknown) => {
+      if (typeof record !== 'object' || record === null) {
+        throw new Error('Could not load deliveries: API returned an invalid delivery.');
+      }
+      return toFrontendDelivery(record as BackendDelivery);
+    });
     if (filters?.search) {
       const q = filters.search.toLowerCase();
       result = result.filter(
@@ -54,7 +159,7 @@ export const api = {
     if (filters?.courier && filters.courier !== 'all') {
       result = result.filter((d) => d.courier === filters.courier);
     }
-    return delay(result);
+    return result;
   },
   getDelivery: (id: string) => delay(mockDeliveries.find((d) => d.id === id || d.trackingId === id)),
   createDelivery: (data: Partial<Delivery>) => {
