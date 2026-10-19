@@ -111,11 +111,15 @@ function DisconnectedView({
   connecting,
   appId,
   onAppIdChange,
+  appSecret,
+  onAppSecretChange,
 }: {
   onConnect: () => void;
   connecting: boolean;
   appId: string;
   onAppIdChange: (value: string) => void;
+  appSecret: string;
+  onAppSecretChange: (value: string) => void;
 }) {
   return (
     <div className="space-y-6">
@@ -201,11 +205,31 @@ function DisconnectedView({
     </p>
   </div>
 
+  <div className="space-y-1.5">
+    <label htmlFor="facebook-app-secret" className="text-sm font-medium">
+      Facebook App Secret
+    </label>
+
+    <Input
+      id="facebook-app-secret"
+      type="password"
+      placeholder="Enter your Meta App Secret"
+      value={appSecret}
+      onChange={(e) => onAppSecretChange(e.target.value)}
+      disabled={connecting}
+      autoComplete="new-password"
+    />
+
+    <p className="text-xs text-muted-foreground">
+      Find this in your Meta App Dashboard under App settings → Basic. It is stored with your account and never shown again.
+    </p>
+  </div>
+
   <Button
     type="submit"
     size="lg"
     className="w-full"
-    disabled={connecting || !appId.trim()}
+    disabled={connecting || !appId.trim() || !appSecret.trim()}
   >
     {connecting ? (
       <>
@@ -778,6 +802,7 @@ console.log(selectedBusiness?.name, 'selected_business_name')
   // Disconnected by default; only true after Facebook authentication succeeds.
   const [fbConnected, setFbConnected] = useState(false);
   const [appId, setAppId] = useState('');
+  const [appSecret, setAppSecret] = useState('');
 
   const {
     data: conn,
@@ -802,21 +827,20 @@ console.log(selectedBusiness?.name, 'selected_business_name')
 
 const getLongLivedFacebookToken = async (
   accessToken: string,
-  userId: string,
+  appId: string,
+  appSecret: string,
 ): Promise<string> => {
-  const url = new URL(
+  const response = await fetch(
     `${import.meta.env.VITE_API_URL}/whatsapp/long-lived-token`,
-  );
-
-  url.searchParams.set('access_token', accessToken);
-  url.searchParams.set('user_id', userId);
-
-  const response = await fetch(url.toString(), {
-    method: 'GET',
-    headers: {
-      accept: '*/*',
+    {
+      method: 'POST',
+      headers: {
+        accept: '*/*',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ accessToken, appId, appSecret }),
     },
-  });
+  );
 
   const result: LongLivedTokenResponse = await response
     .json()
@@ -884,7 +908,8 @@ const storeFacebookTokens = async ({
 
 const saveFacebookConnection = async (
   authResponse: any,
-  appId: any,
+  appId: string,
+  appSecret: string,
 ) => {
   const userId = localStorage.getItem('userId');
 
@@ -909,7 +934,8 @@ const saveFacebookConnection = async (
   const facebookLongLivedAccessToken =
     await getLongLivedFacebookToken(
       facebookAccessToken,
-      userId,
+      appId,
+      appSecret,
     );
 
   console.log(
@@ -951,6 +977,7 @@ const saveFacebookConnection = async (
         facebookAcceessToken: facebookAccessToken,
 
         appId,
+        appSecret,
         grantedScopes: authResponse.grantedScopes,
         accessTokenExpiresIn: String(
           authResponse.expiresIn,
@@ -978,6 +1005,7 @@ const saveFacebookConnection = async (
 const saveConnection = async (
   authResponse: any,
   appIdValue: string,
+  appSecretValue: string,
 ) => {
   try {
     setConnecting(true);
@@ -985,6 +1013,7 @@ const saveConnection = async (
     await saveFacebookConnection(
       authResponse,
       appIdValue,
+      appSecretValue,
     );
 
     setFbConnected(true);
@@ -1146,9 +1175,15 @@ const {
 // inside the click/submit so the popup isn't blocked.
 const launchWhatsAppSignup = () => {
   const trimmedAppId = appId.trim();
+  const trimmedAppSecret = appSecret.trim();
 
   if (!/^\d+$/.test(trimmedAppId)) {
     toast.error('Please enter a valid Facebook App ID (numbers only)');
+    return;
+  }
+
+  if (!trimmedAppSecret) {
+    toast.error('Please enter your Facebook App Secret');
     return;
   }
 
@@ -1192,13 +1227,14 @@ const launchWhatsAppSignup = () => {
     /*
      * This now performs:
      *
-     * 1. GET /whatsapp/long-lived-token
+     * 1. POST /whatsapp/long-lived-token
      * 2. POST /whatsapp/store-token
      * 3. POST /auth/update-user/:id
      */
     await saveConnection(
       authResponse,
       appIdValue,
+      trimmedAppSecret,
     );
 
     /*
@@ -1443,6 +1479,8 @@ const handleDisconnect = async () => {
               connecting={connecting}
               appId={appId}
               onAppIdChange={setAppId}
+              appSecret={appSecret}
+              onAppSecretChange={setAppSecret}
             />
       ) : (
         <div className="space-y-6">
