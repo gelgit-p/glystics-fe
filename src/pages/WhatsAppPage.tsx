@@ -234,8 +234,8 @@ function DisconnectedView({
                 },
                 {
                   icon: Shield,
-                  title: 'Authorize Glystics',
-                  desc: 'Give Glystics permission to manage your WhatsApp Business assets.',
+                  title: 'Authorize dispatchly',
+                  desc: 'Give dispatchly permission to manage your WhatsApp Business assets.',
                 },
                 {
                   icon: Bell,

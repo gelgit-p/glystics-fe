@@ -52,7 +52,7 @@ export default function ApiSettingsPage() {
             <h3 className="flex items-center gap-2 text-base font-semibold">
               <Key className="h-4 w-4 text-muted-foreground" /> API Keys
             </h3>
-            <p className="text-sm text-muted-foreground">Manage keys for API access to Glystics.</p>
+            <p className="text-sm text-muted-foreground">Manage keys for API access to dispatchly.</p>
           </div>
           <Button onClick={() => toast.success('New API key created!')}>
             <Plus className="mr-2 h-4 w-4" /> Create API Key
