@@ -28,7 +28,7 @@ const features = [
   { icon: Webhook, title: 'Webhooks', desc: 'Get real-time callbacks for every message and delivery event.' },
 ];
 
-const workflow = ['Order Created', 'Pickup Scheduled', 'Rider Assigned', 'Picked Up', 'In Transit', 'Out for Delivery', 'Delivered'];
+const workflow = ['Order Created', 'Order Confirmed', 'Picked Up', 'In Transit', 'Completed', 'Cancelled'];
 
 export default function LandingPage() {
   const buyCreditsPath = localStorage.getItem('accessToken')
