@@ -20,7 +20,7 @@ export function AuthLayout({
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/20">
             <MessageCircle className="h-5 w-5" />
           </div>
-          <span className="text-lg font-bold">Glystics</span>
+          <span className="text-lg font-bold">dispatchly</span>
         </Link>
         <div className="max-w-md">
           <h2 className="text-3xl font-bold text-primary-foreground">
@@ -42,7 +42,7 @@ export function AuthLayout({
             ))}
           </div>
         </div>
-        <p className="text-xs text-primary-foreground/60">© 2026 Glystics. All rights reserved.</p>
+        <p className="text-xs text-primary-foreground/60">© 2026 dispatchly. All rights reserved.</p>
       </div>
 
       {/* Right panel */}

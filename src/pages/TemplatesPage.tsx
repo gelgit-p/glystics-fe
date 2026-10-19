@@ -331,7 +331,7 @@ function formatTemplate(template: MetaTemplate): FormattedTemplate {
  * Equivalent curl (all templates):
  *
  * curl -X GET \
- *   'https://glystics.onrender.com/whatsapp/message-templates/{userId}/all' \
+ *   'https://dispatchly.onrender.com/whatsapp/message-templates/{userId}/all' \
  *   -H 'accept: * / *'
  */
 async function fetchMessageTemplates(
