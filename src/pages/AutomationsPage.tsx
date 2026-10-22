@@ -57,7 +57,7 @@ const triggerValues = [
   'Cancelled',
 ];
 
-interface WhatsAppTempvlateOption {
+interface WhatsAppTemplateOption {
   id: string;
   name: string;
   language: string;
