@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   Package,
@@ -23,7 +23,7 @@ import {
 import { Link } from 'react-router-dom';
 import { api } from '@/lib/api';
 import { authenticatedFetch as fetch } from '@/lib/authenticated-fetch';
-import { deliveryActivityData, currentUser } from '@/lib/mock-data';
+import { deliveryActivityData } from '@/lib/mock-data';
 import { LoadingState, StatusBadge } from '@/components/shared';
 import {
   Table,
@@ -46,6 +46,17 @@ interface DashboardAnalytics {
   whatsapp_messages: number;
   whatsapp_delivered: number;
   whatsapp_failed: number;
+}
+
+interface UserProfile {
+  fullName: string;
+}
+
+function getGreeting(date: Date) {
+  const hour = date.getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
 }
 
 function StatCard({
@@ -82,6 +93,39 @@ function StatCard({
 
 export default function DashboardPage() {
   const [timeFilter, setTimeFilter] = useState('7 days');
+  const [currentTime, setCurrentTime] = useState(() => new Date());
+  const userId = localStorage.getItem('userId') ?? '';
+  const userQuery = useQuery<UserProfile>({
+    queryKey: ['user-details', userId],
+    queryFn: async () => {
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/auth/me`,
+        { headers: { accept: '*/*' } },
+      );
+      if (!response.ok) {
+        throw new Error(
+          `Failed to fetch profile: ${response.status} ${response.statusText}`,
+        );
+      }
+      const data: unknown = await response.json();
+      if (
+        typeof data !== 'object' ||
+        data === null ||
+        !('fullName' in data) ||
+        typeof data.fullName !== 'string'
+      ) {
+        throw new Error('The profile response is invalid');
+      }
+      return { fullName: data.fullName };
+    },
+    enabled: Boolean(userId),
+    staleTime: 30_000,
+  });
+  useEffect(() => {
+    const interval = window.setInterval(() => setCurrentTime(new Date()), 60_000);
+    return () => window.clearInterval(interval);
+  }, []);
+
   const { data: deliveries, isLoading } = useQuery({
     queryKey: ['deliveries', { limit: 6 }],
     queryFn: () => api.getDeliveries(),
@@ -113,7 +157,9 @@ export default function DashboardPage() {
     <div className="space-y-6">
       {/* Greeting */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Good morning, {currentUser.name.split(' ')[0]}</h1>
+        <h1 className="text-2xl font-bold tracking-tight">
+          {getGreeting(currentTime)}, {userQuery.data?.fullName.trim().split(/\s+/)[0] || 'there'}
+        </h1>
         <p className="mt-1 text-sm text-muted-foreground">Here's what's happening with your deliveries today.</p>
       </div>
 
