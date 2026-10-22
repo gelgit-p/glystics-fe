@@ -52,7 +52,6 @@ const triggerValues = [
   'Confirmed',
   'Picked Up',
   'In Transit',
-  'Out for Delivery',
   'Completed',
   'Cancelled',
 ];
@@ -193,7 +192,7 @@ export default function AutomationsPage() {
     setCreating(true);
     setForm({
       trigger: 'Shipment status changes',
-      triggerValue: 'Out for Delivery',
+      triggerValue: 'Pending',
       action: '',
       actionTemplate: '',
       name: '',
@@ -452,7 +451,7 @@ const handleSave = async () => {
                 id="autoName"
                 value={form.name || ''}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="Out for Delivery Alert"
+                placeholder="In Transit Alert"
               />
             </div>
 
@@ -471,7 +470,7 @@ const handleSave = async () => {
                       trigger: v,
                       triggerValue:
                         v === 'Shipment status changes'
-                          ? form.triggerValue || 'Out for Delivery'
+                          ? form.triggerValue || 'In Transit'
                           : undefined,
                     })
                   }

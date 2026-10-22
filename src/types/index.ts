@@ -1,11 +1,15 @@
 export type DeliveryStatus =
   | 'Created'
   | 'Pickup Scheduled'
+  | 'Pending'
+  | 'Confirmed'
   | 'Picked Up'
   | 'In Transit'
   | 'Out for Delivery'
   | 'Delivered'
-  | 'Failed';
+  | 'Completed'
+  | 'Failed'
+  | 'Cancelled';
 
 export type NotificationStatus = 'Queued' | 'Sent' | 'Delivered' | 'Read' | 'Failed';
 

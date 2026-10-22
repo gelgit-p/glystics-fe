@@ -32,7 +32,6 @@ const notifPrefs = [
   { key: 'pickup', label: 'Pickup notifications', desc: 'Notify when pickup is scheduled', icon: Package },
   { key: 'rider', label: 'Rider assignment', desc: 'Notify when a rider is assigned', icon: Truck },
   { key: 'shipment', label: 'Shipment updates', desc: 'Notify on shipment status changes', icon: Zap },
-  { key: 'out_for_delivery', label: 'Out-for-delivery', desc: 'Notify when package is out for delivery', icon: Truck },
   { key: 'delivery', label: 'Delivery confirmation', desc: 'Notify when package is delivered', icon: PackageCheck },
   { key: 'failed', label: 'Failed delivery', desc: 'Notify when delivery attempt fails', icon: XCircle },
   { key: 'reschedule', label: 'Delivery rescheduling', desc: 'Notify when delivery is rescheduled', icon: CalendarClock },
