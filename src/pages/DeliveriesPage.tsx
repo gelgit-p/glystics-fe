@@ -84,14 +84,12 @@ import { Textarea } from '@/components/ui/textarea';
  * ======================================================= */
 
 const statusOptions = [
-  'all',
-  'Created',
-  'Pickup Scheduled',
-  'Picked Up',
-  'In Transit',
-  'Out for Delivery',
-  'Delivered',
-  'Failed',
+  'pending',
+  'confirmed',
+  'picked_up',
+  'in_transit',
+  'completed',
+  'cancelled',
 ];
 
 const serviceTypes = [

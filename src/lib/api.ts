@@ -47,26 +47,41 @@ interface BackendDelivery {
   updatedAt: string;
 }
 
+// export type DeliveryStatus =
+//   | 'Pending'
+//   | 'Confirmed'
+//   | 'Picked Up'
+//   | 'In Transit'
+//   | 'Completed'
+//   | 'Cancelled';
+
 function toDeliveryStatus(status: string | null): Delivery['status'] {
   switch (status?.trim().toUpperCase().replace(/[\s-]+/g, '_')) {
-    case 'PICKUP_SCHEDULED':
-      return 'Pickup Scheduled';
+    case 'CREATED':
+    case 'PENDING':
+    case 'PAYMENT_PENDING':
+      return 'Pending';
+    case 'CONFIRMED':
+    case 'BOOKED':
+      return 'Confirmed';
     case 'PICKED_UP':
       return 'Picked Up';
     case 'IN_TRANSIT':
     case 'TRANSIT':
-      return 'In Transit';
     case 'OUT_FOR_DELIVERY':
-      return 'Out for Delivery';
+      return 'In Transit';
+    case 'DEL':
     case 'DELIVERED':
-      return 'Delivered';
+    case 'COMPLETED':
+      return 'Completed';
     case 'FAILED':
     case 'BOOKING_FAILED':
+      return 'Failed';
     case 'CANCELLED':
     case 'CANCELED':
-      return 'Failed';
+      return 'Cancelled';
     default:
-      return 'Created';
+      return 'Pending';
   }
 }
 
