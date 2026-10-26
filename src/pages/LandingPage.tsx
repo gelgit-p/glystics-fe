@@ -286,7 +286,7 @@ export default function LandingPage() {
             to="/register"
             className="mt-8 inline-flex items-center gap-2 rounded-lg bg-white px-6 py-3 text-sm font-semibold text-primary shadow-sm transition-colors hover:bg-white/90"
           >
-            Get Started Free <ArrowRight className="h-4 w-4" />
+            Get Started for N500 <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
       </section>
