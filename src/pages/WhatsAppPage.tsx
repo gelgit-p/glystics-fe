@@ -1508,7 +1508,7 @@ const handleDisconnect = async () => {
       Connected
     </span>
   </div>
-fv
+
   <div className="divide-y divide-border border-y border-border">
     <InfoRow
       icon={Building2}
