@@ -584,6 +584,8 @@ function BusinessAccountsDialog({
 }
 
 let sdkPromise: Promise<void> | null = null;
+const FACEBOOK_GRAPH_VERSION = 'v25.0';
+let initializedFacebookAppId: string | null = null;
 
 // Only loads the script. Init happens later, once the user has entered an App ID.
 const loadFacebookSDK = (): Promise<void> => {
@@ -612,12 +614,14 @@ const loadFacebookSDK = (): Promise<void> => {
 };
 
 const initFacebook = (appId: string) => {
+  if (initializedFacebookAppId === appId) return;
   fbWindow.FB.init({
     appId,
     cookie: true,
     xfbml: true,
-    version: 'v25.0',
+    version: FACEBOOK_GRAPH_VERSION,
   });
+  initializedFacebookAppId = appId;
 };
 
 // Set to true to print the raw access token in the console (debugging only).
@@ -977,7 +981,7 @@ const saveFacebookConnection = async (
         facebookAcceessToken: facebookAccessToken,
 
         appId,
-        appSecret,
+        ...(appSecret.trim() ? { appSecret: appSecret.trim() } : {}),
         grantedScopes: authResponse.grantedScopes,
         accessTokenExpiresIn: String(
           authResponse.expiresIn,
@@ -1170,6 +1174,11 @@ const {
   enabled: !!userId,
 });
 
+useEffect(() => {
+  if (typeof userDetails?.appId === 'string') {
+    setAppId(userDetails.appId);
+  }
+}, [userDetails?.appId]);
 
 // Deliberately not async: FB.login must be called synchronously
 // inside the click/submit so the popup isn't blocked.
@@ -1179,11 +1188,6 @@ const launchWhatsAppSignup = () => {
 
   if (!/^\d+$/.test(trimmedAppId)) {
     toast.error('Please enter a valid Facebook App ID (numbers only)');
-    return;
-  }
-
-  if (!trimmedAppSecret) {
-    toast.error('Please enter your Facebook App Secret');
     return;
   }
 
@@ -1313,6 +1317,12 @@ const handleManageBusinesses = async () => {
   }
 
   try {
+    const configuredAppId = appId.trim();
+    if (!/^\d+$/.test(configuredAppId)) {
+      throw new Error('Reconnect WhatsApp to configure a valid Facebook App ID.');
+    }
+    initFacebook(configuredAppId);
+
     setLoadingBusinesses(true);
 
     const businessResponse = await fbApi<{
@@ -1498,7 +1508,7 @@ const handleDisconnect = async () => {
       Connected
     </span>
   </div>
-
+fv
   <div className="divide-y divide-border border-y border-border">
     <InfoRow
       icon={Building2}
