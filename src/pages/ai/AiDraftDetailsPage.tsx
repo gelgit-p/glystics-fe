@@ -12,9 +12,21 @@ export default function AiDraftDetailsPage() {
   const { id = '' } = useParams();
   const qc = useQueryClient();
   const { data, isLoading, error, refetch } = useQuery({ queryKey: ['ai-draft', id], queryFn: () => aiApi.draft(id) });
+  const senderProfile = useQuery({ queryKey: ['ai-sender-profile'], queryFn: aiApi.senderProfile });
   const [form, setForm] = useState<Record<string, string>>({});
   const [quoteId, setQuoteId] = useState('');
-  useEffect(() => { if (data) setForm(Object.fromEntries(FIELDS.map((f) => [f, String((data as unknown as Record<string, unknown>)[f] ?? '')]))); }, [data]);
+  useEffect(() => {
+    if (!data) return;
+    const next = Object.fromEntries(FIELDS.map((f) => [f, String((data as unknown as Record<string, unknown>)[f] ?? '')])) as Record<string, string>;
+    // Safety net: backend backfills sender from profile; if still empty, prefill here.
+    const p = senderProfile.data;
+    if (p) {
+      if (!next.senderName && p.senderName) next.senderName = p.senderName;
+      if (!next.senderPhone && p.senderPhone) next.senderPhone = p.senderPhone;
+      if (!next.senderAddress && p.senderAddress) next.senderAddress = p.senderAddress;
+    }
+    setForm(next);
+  }, [data, senderProfile.data]);
   useEffect(() => { if (!quoteId && data?.quotes?.[0]) setQuoteId(data.quotes[0].id); }, [data?.quotes, quoteId]);
   const invalidate = () => qc.invalidateQueries({ queryKey: ['ai-draft', id] });
   const save = useMutation({ mutationFn: () => aiApi.updateDraft(id, form), onSuccess: () => { toast.success('Draft updated'); invalidate(); }, onError: (e) => toast.error(e instanceof Error ? e.message : 'Save failed') });
@@ -28,7 +40,7 @@ export default function AiDraftDetailsPage() {
     <div>
       <PageHeader title="Delivery Draft" description="Review extracted details, compare Shipbubble couriers, then approve. AI data is re-validated by the backend."><DraftStatus status={data.status} /></PageHeader>
       <DemoBanner />
-      {data.missingFields.length > 0 && <div className="mb-4 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">Missing before quotes: {data.missingFields.join(', ')}</div>}
+      {data.missingFields.length > 0 && <div className="mb-4 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">Missing before quotes: {data.missingFields.join(', ')}{data.missingFields.some((f) => f.startsWith('sender')) && <> — sender details come from your profile: set them in <a className="underline" href="/settings/profile">Profile settings</a> or fill them below and save.</>}</div>}
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="rounded-lg border bg-card p-4">
           <h2 className="mb-3 font-semibold">Extracted details {data.confidence != null && <span className="text-sm text-muted-foreground">(confidence {Math.round(data.confidence * 100)}%)</span>}</h2>
