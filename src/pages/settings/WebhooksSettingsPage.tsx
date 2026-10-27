@@ -12,7 +12,8 @@ import {
   ExternalLink,
 } from 'lucide-react';
 
-import { api } from '@/lib/api';
+import { getWebhookSubscriptions, subscribeWebhook, type WebhookSubscription } from '@/lib/webhooks-api';
+import WebhookLogs from '@/components/settings/WebhookLogs';
 
 import { LoadingState, StatusBadge } from '@/components/shared';
 
@@ -20,8 +21,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-
-const API_BASE_URL = 'https://glystics.onrender.com';
 
 const allEvents = [
   'message.sent',
@@ -32,102 +31,6 @@ const allEvents = [
   'delivery.updated',
   'delivery.delivered',
 ];
-
-type WebhookSubscription = {
-  id?: string;
-  url?: string;
-  callback_uri?: string;
-  override_callback_uri?: string;
-  active?: boolean;
-  events?: string[];
-  createdAt?: string;
-  created_at?: string;
-  status?: string;
-  [key: string]: unknown;
-};
-
-type SubscriptionPayload = {
-  userId: string;
-  override_callback_uri: string;
-  verify_token: string;
-};
-
-async function getSubscriptions(): Promise<WebhookSubscription[]> {
-  const response = await fetch(
-    `${API_BASE_URL}/whatsapp/get-subscriptions`,
-    {
-      method: 'GET',
-      headers: {
-        Accept: '*/*',
-      },
-    },
-  );
-
-  if (!response.ok) {
-    throw new Error(
-      `Failed to fetch subscriptions (${response.status})`,
-    );
-  }
-
-  const data = await response.json();
-
-  // Accommodate common API response formats.
-  if (Array.isArray(data)) {
-    return data;
-  }
-
-  if (Array.isArray(data?.data)) {
-    return data.data;
-  }
-
-  if (Array.isArray(data?.subscriptions)) {
-    return data.subscriptions;
-  }
-
-  if (Array.isArray(data?.webhooks)) {
-    return data.webhooks;
-  }
-
-  return [];
-}
-
-
-async function subscribeWebhook(
-  payload: {
-    userId: string;
-    override_callback_uri: string;
-    verify_token: string;
-  }
-) {
-  const params = new URLSearchParams({
-    userId: payload.userId,
-    override_callback_uri: payload.override_callback_uri,
-    verify_token: payload.verify_token,
-  });
-
-  const response = await fetch(
-    `https://glystics.onrender.com/whatsapp/subscribe?${params}`,
-    {
-      method: 'POST',
-      headers: {
-        Accept: '*/*',
-      },
-    }
-  );
-
-  if (!response.ok) {
-    throw new Error(
-      (await response.text()) ||
-        `Subscription failed (${response.status})`
-    );
-  }
-
-  const contentType = response.headers.get('content-type');
-
-  return contentType?.includes('application/json')
-    ? response.json()
-    : response.text();
-}
 
 export default function WebhooksSettingsPage() {
   const queryClient = useQueryClient();
@@ -153,19 +56,18 @@ export default function WebhooksSettingsPage() {
     isFetching,
   } = useQuery({
     queryKey: ['webhooks'],
-    queryFn: getSubscriptions,
+    queryFn: getWebhookSubscriptions,
     retry: 1,
   });
 
   const subscribeMutation = useMutation({
-    mutationFn: subscribeWebhook,
+    mutationFn: (payload: { userId: string; override_callback_uri: string; verify_token: string }) => subscribeWebhook({ override_callback_uri: payload.override_callback_uri, verify_token: payload.verify_token }),
 
     onSuccess: async () => {
       toast.success('Webhook subscription updated successfully');
 
-      await queryClient.invalidateQueries({
-        queryKey: ['webhooks'],
-      });
+      await queryClient.invalidateQueries({ queryKey: ['webhooks'] });
+      await queryClient.invalidateQueries({ queryKey: ['whatsapp-webhook-logs'] });
 
       setVerifyToken('');
     },
@@ -276,7 +178,7 @@ export default function WebhooksSettingsPage() {
                 autoComplete="off"
               />
             <p className="text-xs text-muted-foreground">
-              The userId passed to the WhatsApp subscription API.
+              Your authenticated account is used by the WhatsApp subscription API.
             </p>
           </div>
 
@@ -350,9 +252,7 @@ export default function WebhooksSettingsPage() {
         </div>
 
         <p className="mt-3 text-xs text-muted-foreground">
-          Note: The provided subscribe endpoint does not include an
-          events parameter. These selections are currently UI-only and
-          are not sent to the backend.
+          Meta WABA app subscriptions use the callback URL and verify token. Event fields are configured in Meta; these local toggles do not change Meta field subscriptions.
         </p>
 
         <div className="mt-4 flex justify-end">
@@ -480,6 +380,8 @@ export default function WebhooksSettingsPage() {
           </div>
         )}
       </div>
+
+      <WebhookLogs />
     </div>
   );
 }
