@@ -14,6 +14,7 @@ export default function AiOverviewPage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [demoText, setDemoText] = useState(SAMPLE);
+  const [receiverAddress, setReceiverAddress] = useState('');
   const [sender, setSender] = useState<SenderProfileInput>({ senderName: '', senderPhone: '', senderAddress: '12 Allen Avenue, Ikeja, Lagos', senderEmail: '' });
   const [saveSender, setSaveSender] = useState(true);
   const senderProfile = useQuery({ queryKey: ['ai-sender-profile'], queryFn: aiApi.senderProfile });
@@ -23,7 +24,7 @@ export default function AiOverviewPage() {
   const { data, isLoading, error, refetch } = useQuery({ queryKey: ['ai-overview'], queryFn: aiApi.overview });
   const drafts = useQuery({ queryKey: ['ai-drafts'], queryFn: () => aiApi.drafts() });
   const simulate = useMutation({
-    mutationFn: () => aiApi.simulateInbound(demoText, sender, saveSender),
+    mutationFn: () => aiApi.simulateInbound(demoText, sender, saveSender, receiverAddress),
     onSuccess: (r) => {
       qc.invalidateQueries();
       if (r.draft) { toast.success(`Draft created (${r.draft.status}) — opening it`); navigate(`/ai/drafts/${r.draft.id}`); }
@@ -51,8 +52,13 @@ export default function AiOverviewPage() {
         <label className="mt-2 flex items-center gap-2 text-sm"><input type="checkbox" checked={saveSender} onChange={(e) => setSaveSender(e.target.checked)} /> Save sender details to my profile</label>
         {missingSender && <p className="mt-2 text-sm text-amber-600">Add a sender/pickup address so the draft can be priced immediately.</p>}
         <h3 className="mb-2 mt-4 text-sm font-medium">Customer WhatsApp message</h3>
+        <p className="mb-2 text-xs text-muted-foreground">Each simulation starts a fresh conversation, so receiver details from previous demo runs do not leak into the new draft.</p>
         <textarea className="w-full rounded-md border p-2 text-sm" rows={3} value={demoText} onChange={(e) => setDemoText(e.target.value)} />
-        <button className="mt-2 rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-50" disabled={simulate.isPending} onClick={() => simulate.mutate()}>{simulate.isPending ? 'Processing...' : 'Simulate WhatsApp message'}</button>
+        <label className="mt-4 block text-sm font-medium">Receiver Address
+          <input className="mt-1 w-full rounded-md border p-2 font-normal" placeholder="Enter the exact receiver address for this simulation" value={receiverAddress} onChange={(e) => setReceiverAddress(e.target.value)} />
+        </label>
+        <p className="mt-1 text-xs text-muted-foreground">Used exactly as entered and overrides any address detected in the WhatsApp message. Leave empty to use the address parsed from the message.</p>
+        <button className="mt-3 rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-50" disabled={simulate.isPending} onClick={() => simulate.mutate()}>{simulate.isPending ? 'Processing...' : 'Simulate WhatsApp message'}</button>
       </div>
       <h2 className="mb-3 mt-8 font-semibold">Recent drafts</h2>
       {drafts.data?.length ? <div className="space-y-2">{drafts.data.slice(0, 8).map((d) => <Link key={d.id} to={`/ai/drafts/${d.id}`} className="flex justify-between rounded-lg border bg-card p-3 text-sm hover:bg-accent"><span>{d.packageName ?? 'Unnamed package'} → {d.receiverName ?? 'Unknown receiver'}</span><span>{d.status}</span></Link>)}</div> : <EmptyState icon={Package} title="No AI drafts yet" description="Simulate a message above or connect WhatsApp to receive real customer messages." />}

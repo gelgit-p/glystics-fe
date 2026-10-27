@@ -49,5 +49,5 @@ export const aiApi = {
   audit: () => req<AiAudit[]>('/ai/audit'),
   senderProfile: () => req<SenderProfile>('/ai/sender-profile'),
   updateSenderProfile: (body: SenderProfileInput) => req<SenderProfile>('/ai/sender-profile', { method: 'PATCH', body: JSON.stringify(body) }),
-  simulateInbound: (text: string, sender?: SenderProfileInput, saveSenderToProfile = true) => req<SimulateResult>('/ai/simulate-inbound', { method: 'POST', body: JSON.stringify({ text, sender, saveSenderToProfile }) }),
+  simulateInbound: (text: string, sender?: SenderProfileInput, saveSenderToProfile = true, receiverAddress?: string) => req<SimulateResult>('/ai/simulate-inbound', { method: 'POST', body: JSON.stringify({ text, sender, saveSenderToProfile, receiverAddress: receiverAddress?.trim() ? receiverAddress.trim() : undefined }) }),
 };
