@@ -13,6 +13,7 @@ export interface AiOverview { aiMode: 'live' | 'demo'; demoLabel?: string; conve
 export interface AiQuote { id: string; courierName: string; courierId: string; serviceCode: string; amount: number; currency: string; deliveryEta?: string | null; score: number; scoreReasons: string[]; }
 export interface AiDraft {
   id: string; status: string; missingFields: string[]; confidence?: number | null; deliveryId?: string | null;
+  customerSelectedQuoteId?: string | null; quoteOfferSentAt?: string | null; quoteOfferMessageId?: string | null; customerSelectionAt?: string | null; conversationId?: string | null;
   senderName?: string | null; senderPhone?: string | null; senderAddress?: string | null;
   receiverName?: string | null; receiverPhone?: string | null; receiverAddress?: string | null;
   packageName?: string | null; packageWeight?: string | null; packageValue?: string | null; pickupDate?: string | null;
@@ -43,6 +44,8 @@ export const aiApi = {
   draft: (id: string) => req<AiDraft>(`/ai/drafts/${id}`),
   updateDraft: (id: string, body: Record<string, unknown>) => req<AiDraft>(`/ai/drafts/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
   fetchQuotes: (id: string) => req<{ quotes: AiQuote[] }>(`/ai/drafts/${id}/quotes`, { method: 'POST', body: '{}' }),
+  quoteOffer: (id: string) => req<{ message: string; quotes: AiQuote[] }>(`/ai/drafts/${id}/quote-offer`),
+  sendQuote: (id: string, message?: string) => req<{ sent: boolean; draft: AiDraft; message: string; waMessageId: string }>(`/ai/drafts/${id}/send-quote`, { method: 'POST', body: JSON.stringify({ message }) }),
   approvals: () => req<AiDraft[]>('/ai/approvals'),
   approve: (id: string, quoteId: string) => req<{ deliveryId: string; trackingId?: string; checkout?: { checkout_url: string }; note?: string }>(`/ai/drafts/${id}/approve`, { method: 'POST', body: JSON.stringify({ quoteId }) }),
   reject: (id: string) => req(`/ai/drafts/${id}/reject`, { method: 'POST', body: '{}' }),
