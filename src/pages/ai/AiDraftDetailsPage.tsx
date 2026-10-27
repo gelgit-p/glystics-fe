@@ -37,13 +37,15 @@ export default function AiDraftDetailsPage() {
   const save = useMutation({ mutationFn: () => aiApi.updateDraft(id, form), onSuccess: () => { toast.success('Draft updated'); invalidate(); }, onError: (e) => toast.error(e instanceof Error ? e.message : 'Save failed') });
   const quotes = useMutation({ mutationFn: () => aiApi.fetchQuotes(id), onSuccess: (r) => { toast.success(`${r.quotes.length} courier quotes fetched from Shipbubble`); setQuoteMessage(''); invalidate(); qc.invalidateQueries({ queryKey: ['ai-quote-offer', id] }); }, onError: (e) => toast.error(e instanceof Error ? e.message : 'Quotes failed') });
   const sendQuote = useMutation({ mutationFn: () => aiApi.sendQuote(id, quoteMessage), onSuccess: () => { toast.success('Quote sent to customer on WhatsApp — waiting for their option number'); invalidate(); }, onError: (e) => toast.error(e instanceof Error ? e.message : 'Failed to send quote') });
-  const approve = useMutation({ mutationFn: () => aiApi.approve(id, quoteId), onSuccess: (r) => { toast.success(`Delivery ${r.trackingId ?? r.deliveryId} created — pay checkout to trigger Shipbubble booking`); if (r.checkout?.checkout_url) window.open(r.checkout.checkout_url, '_blank'); invalidate(); }, onError: (e) => toast.error(e instanceof Error ? e.message : 'Approval failed') });
+  const approve = useMutation({ mutationFn: () => aiApi.approve(id, quoteId), onSuccess: (r) => { toast.success(`Delivery ${r.trackingId ?? r.deliveryId} created — use Send payment link to text checkout to the customer`); invalidate(); }, onError: (e) => toast.error(e instanceof Error ? e.message : 'Approval failed') });
+  const sendPaymentLink = useMutation({ mutationFn: () => aiApi.sendPaymentLink(id), onSuccess: (r) => { toast.success(`Payment link sent to customer on WhatsApp${r.trackingId ? ` · ${r.trackingId}` : ''}`); invalidate(); }, onError: (e) => toast.error(e instanceof Error ? e.message : 'Failed to send payment link') });
   const reject = useMutation({ mutationFn: () => aiApi.reject(id), onSuccess: () => { toast.success('Draft rejected'); invalidate(); }, onError: (e) => toast.error(e instanceof Error ? e.message : 'Reject failed') });
   if (isLoading) return <LoadingState text="Loading draft..." />;
   if (error || !data) return <ErrorState onRetry={() => refetch()} />;
   const recommended = data.quotes?.[0];
   const awaitingCustomer = data.status === 'AWAITING_CUSTOMER_SELECTION';
-  const customerSelected = data.status === 'CUSTOMER_SELECTED';
+  const customerSelected = data.status === 'CUSTOMER_SELECTED' || data.status === 'PAYMENT_LINK_SENT';
+  const paymentLinkSent = data.status === 'PAYMENT_LINK_SENT';
   const selectedQuote = data.quotes?.find((q) => q.id === data.customerSelectedQuoteId);
   return (
     <div>
@@ -51,7 +53,7 @@ export default function AiDraftDetailsPage() {
       <DemoBanner />
       {data.missingFields.length > 0 && <div className="mb-4 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">Missing before quotes: {data.missingFields.join(', ')}{data.missingFields.some((f) => f.startsWith('sender')) && <> — sender details come from your profile: set them in <a className="underline" href="/settings/profile">Profile settings</a> or fill them below and save.</>}</div>}
       {awaitingCustomer && <div className="mb-4 rounded-md border border-blue-300 bg-blue-50 p-3 text-sm text-blue-900">Quote sent to the customer on WhatsApp{data.quoteOfferSentAt ? ` at ${new Date(data.quoteOfferSentAt).toLocaleString()}` : ''}. Waiting for them to reply with an option number. This page refreshes automatically.</div>}
-      {customerSelected && selectedQuote && <div className="mb-4 rounded-md border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-900">Customer selected: <strong>{selectedQuote.courierName} — {money(selectedQuote.amount, selectedQuote.currency)}</strong>{data.customerSelectionAt ? ` at ${new Date(data.customerSelectionAt).toLocaleString()}` : ''}. You can now approve to create the delivery/checkout.</div>}
+      {customerSelected && selectedQuote && <div className="mb-4 rounded-md border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-900">Customer selected: <strong>{selectedQuote.courierName} — {money(selectedQuote.amount, selectedQuote.currency)}</strong>{data.customerSelectionAt ? ` at ${new Date(data.customerSelectionAt).toLocaleString()}` : ''}. {paymentLinkSent ? 'Payment link has been sent to the customer in WhatsApp chat.' : 'Payment link will be texted to the customer automatically; you can also resend it below.'}</div>}
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="rounded-lg border bg-card p-4">
           <h2 className="mb-3 font-semibold">Extracted details {data.confidence != null && <span className="text-sm text-muted-foreground">(confidence {Math.round(data.confidence * 100)}%)</span>}</h2>
@@ -68,9 +70,9 @@ export default function AiDraftDetailsPage() {
                 <strong>{money(q.amount, q.currency)}</strong>
               </label>))}
               {recommended && !quoteId && <p className="text-sm text-muted-foreground">Recommended: {recommended.courierName} ({money(recommended.amount, recommended.currency)}) — select it or another quote to approve.</p>}
-              <div className="flex flex-wrap gap-2 pt-2"><button className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-50" disabled={!quoteId || approve.isPending || awaitingCustomer} onClick={() => approve.mutate()}>{customerSelected ? 'Approve customer selection' : 'Approve & create delivery'}</button>
+              <div className="flex flex-wrap gap-2 pt-2"><button className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-50" disabled={!quoteId || approve.isPending || awaitingCustomer} onClick={() => approve.mutate()}>{customerSelected ? 'Approve customer selection' : 'Approve & create delivery'}</button><button className="rounded-md bg-emerald-600 px-4 py-2 text-sm text-white disabled:opacity-50" disabled={sendPaymentLink.isPending || awaitingCustomer || (!customerSelected && !data.deliveryId)} onClick={() => sendPaymentLink.mutate()}>{paymentLinkSent ? 'Resend payment link in chat' : 'Send payment link in chat'}</button>
               <button className="rounded-md border border-destructive px-4 py-2 text-sm text-destructive" onClick={() => reject.mutate()}>Reject</button></div>
-              <p className="text-xs text-muted-foreground">Owner approval charges delivery credits and creates a Bachs checkout via the existing flow. Shipbubble booking happens only after payment completes — an AI quote alone is never a booking.</p>
+              <p className="text-xs text-muted-foreground">When the customer replies with an option number, Dispatchly automatically creates the delivery/checkout and texts the payment link to them in WhatsApp. Owner approval remains available as a manual fallback. Shipbubble booking happens only after payment completes.</p>
             </div> : <p className="text-sm text-muted-foreground">No quotes yet. Complete missing fields, then fetch quotes.</p>}
             {data.deliveryId && <p className="mt-3 text-sm">Linked delivery: <a className="text-primary underline" href={`/deliveries/${data.deliveryId}`}>{data.deliveryId}</a></p>}
           </div>

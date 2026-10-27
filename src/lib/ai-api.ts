@@ -46,6 +46,7 @@ export const aiApi = {
   fetchQuotes: (id: string) => req<{ quotes: AiQuote[] }>(`/ai/drafts/${id}/quotes`, { method: 'POST', body: '{}' }),
   quoteOffer: (id: string) => req<{ message: string; quotes: AiQuote[] }>(`/ai/drafts/${id}/quote-offer`),
   sendQuote: (id: string, message?: string) => req<{ sent: boolean; draft: AiDraft; message: string; waMessageId: string }>(`/ai/drafts/${id}/send-quote`, { method: 'POST', body: JSON.stringify({ message }) }),
+  sendPaymentLink: (id: string) => req<{ sent: boolean; deliveryId: string; trackingId?: string; checkoutUrl: string; message: string }>(`/ai/drafts/${id}/send-payment-link`, { method: 'POST', body: '{}' }),
   approvals: () => req<AiDraft[]>('/ai/approvals'),
   approve: (id: string, quoteId: string) => req<{ deliveryId: string; trackingId?: string; checkout?: { checkout_url: string }; note?: string }>(`/ai/drafts/${id}/approve`, { method: 'POST', body: JSON.stringify({ quoteId }) }),
   reject: (id: string) => req(`/ai/drafts/${id}/reject`, { method: 'POST', body: '{}' }),
