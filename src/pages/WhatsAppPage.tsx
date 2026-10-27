@@ -112,6 +112,7 @@ function DisconnectedView({
   appId,
   onAppIdChange,
   appSecret,
+  appSecretConfigured = false,
   onAppSecretChange,
 }: {
   onConnect: () => void;
@@ -119,6 +120,7 @@ function DisconnectedView({
   appId: string;
   onAppIdChange: (value: string) => void;
   appSecret: string;
+  appSecretConfigured?: boolean;
   onAppSecretChange: (value: string) => void;
 }) {
   return (
@@ -213,7 +215,7 @@ function DisconnectedView({
     <Input
       id="facebook-app-secret"
       type="password"
-      placeholder="Enter your Meta App Secret"
+      placeholder={appSecretConfigured ? "Saved — enter only to replace it" : "Enter your Meta App Secret"}
       value={appSecret}
       onChange={(e) => onAppSecretChange(e.target.value)}
       disabled={connecting}
@@ -221,7 +223,7 @@ function DisconnectedView({
     />
 
     <p className="text-xs text-muted-foreground">
-      Find this in your Meta App Dashboard under App settings → Basic. It is stored with your account and never shown again.
+      Find this in your Meta App Dashboard under App settings → Basic. {appSecretConfigured ? 'A secret is already saved for this account. Leave blank to reuse it; entering a new one replaces it.' : 'It is stored with your account and never shown again.'}
     </p>
   </div>
 
@@ -229,7 +231,7 @@ function DisconnectedView({
     type="submit"
     size="lg"
     className="w-full"
-    disabled={connecting || !appId.trim() || !appSecret.trim()}
+    disabled={connecting || !appId.trim() || (!appSecret.trim() && !appSecretConfigured)}
   >
     {connecting ? (
       <>
@@ -1174,11 +1176,16 @@ const {
   enabled: !!userId,
 });
 
+const [appSecretConfigured, setAppSecretConfigured] = useState(false);
+
 useEffect(() => {
-  if (typeof userDetails?.appId === 'string') {
-    setAppId(userDetails.appId);
+  if (typeof userDetails?.appId === 'string' && userDetails.appId.trim()) {
+    setAppId((current) => current || userDetails.appId);
   }
-}, [userDetails?.appId]);
+  if (typeof userDetails?.appSecretConfigured === 'boolean') {
+    setAppSecretConfigured(userDetails.appSecretConfigured);
+  }
+}, [userDetails?.appId, userDetails?.appSecretConfigured]);
 
 // Deliberately not async: FB.login must be called synchronously
 // inside the click/submit so the popup isn't blocked.
@@ -1436,9 +1443,15 @@ const handleDisconnect = async () => {
   );
 }
 
-  // Driven by Facebook authentication, not by the backend default status.
-  // Once the backend returns real data, use: conn.status === 'Connected'
-  const isConnected = userDetails?.facebookConnectStatus === true;
+  // Persisted connection: retain after reload when the account has completed
+  // Facebook connect + WABA/phone selection. fbConnected covers the current session.
+  const hasSelectedPhone = Array.isArray(userDetails?.selectedPhoneNumberId)
+    ? userDetails.selectedPhoneNumberId.length > 0
+    : !!userDetails?.selectedPhoneNumberId;
+  const isConnected =
+    fbConnected ||
+    userDetails?.facebookConnectStatus === true ||
+    (!!userDetails?.selectedWabaId && hasSelectedPhone);
 
   const connectionData = {
   businessName:
@@ -1490,6 +1503,7 @@ const handleDisconnect = async () => {
               appId={appId}
               onAppIdChange={setAppId}
               appSecret={appSecret}
+              appSecretConfigured={appSecretConfigured}
               onAppSecretChange={setAppSecret}
             />
       ) : (
