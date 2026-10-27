@@ -26,6 +26,12 @@ const ApiSettingsPage = lazy(() => import('@/pages/settings/ApiSettingsPage'));
 const WebhooksSettingsPage = lazy(() => import('@/pages/settings/WebhooksSettingsPage'));
 const SecuritySettingsPage = lazy(() => import('@/pages/settings/SecuritySettingsPage'));
 const TrackingPage = lazy(() => import('@/pages/TrackingPage'));
+const AiOverviewPage = lazy(() => import('@/pages/ai/AiOverviewPage'));
+const AiInboxPage = lazy(() => import('@/pages/ai/AiInboxPage'));
+const AiDraftsPage = lazy(() => import('@/pages/ai/AiDraftsPage'));
+const AiDraftDetailsPage = lazy(() => import('@/pages/ai/AiDraftDetailsPage'));
+const AiApprovalsPage = lazy(() => import('@/pages/ai/AiApprovalsPage'));
+const AiAuditPage = lazy(() => import('@/pages/ai/AiAuditPage'));
 
 function PageLoader() {
   return <LoadingState text="Loading page..." />;
@@ -72,6 +78,12 @@ export default function App() {
               <Route path="/templates" element={<CreditAccessGate><TemplatesPage /></CreditAccessGate>} />
               <Route path="/automations" element={<CreditAccessGate><AutomationsPage /></CreditAccessGate>} />
               <Route path="/whatsapp" element={<CreditAccessGate><WhatsAppPage /></CreditAccessGate>} />
+              <Route path="/ai" element={<CreditAccessGate><AiOverviewPage /></CreditAccessGate>} />
+              <Route path="/ai/inbox" element={<CreditAccessGate><AiInboxPage /></CreditAccessGate>} />
+              <Route path="/ai/drafts" element={<CreditAccessGate><AiDraftsPage /></CreditAccessGate>} />
+              <Route path="/ai/drafts/:id" element={<CreditAccessGate><AiDraftDetailsPage /></CreditAccessGate>} />
+              <Route path="/ai/approvals" element={<CreditAccessGate><AiApprovalsPage /></CreditAccessGate>} />
+              <Route path="/ai/audit" element={<CreditAccessGate><AiAuditPage /></CreditAccessGate>} />
               <Route path="/billing" element={<BillingPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/settings/profile" element={<ProfileSettingsPage />} />

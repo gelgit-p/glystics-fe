@@ -12,6 +12,11 @@ import {
   ChevronLeft,
   MessageCircle,
   LockKeyhole,
+  Sparkles,
+  Inbox,
+  FileText,
+  CheckCircle2,
+  History,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
@@ -45,6 +50,11 @@ const navItems = [
   { to: '/templates', label: 'Templates', icon: MessageSquare },
   { to: '/automations', label: 'Automations', icon: Zap },
   { to: '/whatsapp', label: 'WhatsApp', icon: MessageCircle },
+  { to: '/ai', label: 'Dispatchly AI', icon: Sparkles },
+  { to: '/ai/inbox', label: 'AI Inbox', icon: Inbox },
+  { to: '/ai/drafts', label: 'AI Drafts', icon: FileText },
+  { to: '/ai/approvals', label: 'AI Approvals', icon: CheckCircle2 },
+  { to: '/ai/audit', label: 'AI Audit', icon: History },
   { to: '/billing', label: 'Billing', icon: CreditCard },
 ];
 
