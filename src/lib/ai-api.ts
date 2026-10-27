@@ -22,7 +22,17 @@ export interface AiMessage { id: string; direction: string; body?: string | null
 export interface AiConversation { id: string; customerWaId: string; status: string; updatedAt: string; messages?: AiMessage[]; drafts?: AiDraft[]; }
 export interface AiAudit { id: string; actorType: string; action: string; entityType: string; entityId?: string | null; createdAt: string; metadata?: Record<string, unknown> | null; }
 
+export interface AiSettings { aiDeliveryDetectionEnabled: boolean; globalEnabled: boolean; effectiveEnabled: boolean; role: 'USER' | 'SUPER_ADMIN'; aiMode: 'live' | 'demo'; }
+export interface AdminUser { id: string; email: string; businessName: string; role: 'USER' | 'SUPER_ADMIN'; aiDeliveryDetectionEnabled: boolean; createdAt: string; _count: { aiConversations: number; deliveryDrafts: number }; }
+export interface AdminOverview { globalEnabled: boolean; aiMode: string; users: number; superAdmins: number; tenantsWithDetectionEnabled: number; conversations: number; drafts: number; approvals: number; }
+
 export const aiApi = {
+  settings: () => req<AiSettings>('/ai/settings'),
+  updateSettings: (aiDeliveryDetectionEnabled: boolean) => req<AiSettings>('/ai/settings', { method: 'PATCH', body: JSON.stringify({ aiDeliveryDetectionEnabled }) }),
+  adminOverview: () => req<AdminOverview>('/ai/admin/overview'),
+  adminUsers: () => req<AdminUser[]>('/ai/admin/users'),
+  adminSetRole: (id: string, role: 'USER' | 'SUPER_ADMIN') => req(`/ai/admin/users/${id}/role`, { method: 'PATCH', body: JSON.stringify({ role }) }),
+  adminSetDetection: (id: string, aiDeliveryDetectionEnabled: boolean) => req(`/ai/admin/users/${id}/ai-detection`, { method: 'PATCH', body: JSON.stringify({ aiDeliveryDetectionEnabled }) }),
   overview: () => req<AiOverview>('/ai/overview'),
   conversations: () => req<AiConversation[]>('/ai/conversations'),
   conversation: (id: string) => req<AiConversation & { messages: AiMessage[]; drafts: AiDraft[] }>(`/ai/conversations/${id}`),

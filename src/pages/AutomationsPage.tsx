@@ -10,6 +10,7 @@ import {
   Pencil,
 } from 'lucide-react';
 import { PageHeader, LoadingState, EmptyState, ErrorState } from '@/components/shared';
+import { AiDeliveryDetectionCard, SuperAdminAiPanel } from '@/components/ai/AiAutomationSettings';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -369,6 +370,9 @@ const handleSave = async () => {
           <Plus className="mr-2 h-4 w-4" /> Create Automation
         </Button>
       </PageHeader>
+
+      <AiDeliveryDetectionCard />
+      <SuperAdminAiPanel />
 
       {isLoading ? (
         <LoadingState />

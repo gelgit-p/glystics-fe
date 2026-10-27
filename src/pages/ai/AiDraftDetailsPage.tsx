@@ -15,6 +15,7 @@ export default function AiDraftDetailsPage() {
   const [form, setForm] = useState<Record<string, string>>({});
   const [quoteId, setQuoteId] = useState('');
   useEffect(() => { if (data) setForm(Object.fromEntries(FIELDS.map((f) => [f, String((data as unknown as Record<string, unknown>)[f] ?? '')]))); }, [data]);
+  useEffect(() => { if (!quoteId && data?.quotes?.[0]) setQuoteId(data.quotes[0].id); }, [data?.quotes, quoteId]);
   const invalidate = () => qc.invalidateQueries({ queryKey: ['ai-draft', id] });
   const save = useMutation({ mutationFn: () => aiApi.updateDraft(id, form), onSuccess: () => { toast.success('Draft updated'); invalidate(); }, onError: (e) => toast.error(e instanceof Error ? e.message : 'Save failed') });
   const quotes = useMutation({ mutationFn: () => aiApi.fetchQuotes(id), onSuccess: (r) => { toast.success(`${r.quotes.length} courier quotes fetched from Shipbubble`); invalidate(); }, onError: (e) => toast.error(e instanceof Error ? e.message : 'Quotes failed') });
