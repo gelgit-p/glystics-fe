@@ -22,6 +22,9 @@ export interface AiMessage { id: string; direction: string; body?: string | null
 export interface AiConversation { id: string; customerWaId: string; status: string; updatedAt: string; messages?: AiMessage[]; drafts?: AiDraft[]; }
 export interface AiAudit { id: string; actorType: string; action: string; entityType: string; entityId?: string | null; createdAt: string; metadata?: Record<string, unknown> | null; }
 
+export interface SenderProfile { senderName: string | null; senderPhone: string | null; senderAddress: string | null; senderEmail: string | null; }
+export interface SenderProfileInput { senderName?: string; senderPhone?: string; senderAddress?: string; senderEmail?: string; }
+export interface SimulateResult { simulated: boolean; aiMode: string; conversationId: string; senderProfile: SenderProfile; draft: AiDraft | null; }
 export interface AiSettings { aiDeliveryDetectionEnabled: boolean; globalEnabled: boolean; effectiveEnabled: boolean; role: 'USER' | 'SUPER_ADMIN'; aiMode: 'live' | 'demo'; }
 export interface AdminUser { id: string; email: string; businessName: string; role: 'USER' | 'SUPER_ADMIN'; aiDeliveryDetectionEnabled: boolean; createdAt: string; _count: { aiConversations: number; deliveryDrafts: number }; }
 export interface AdminOverview { globalEnabled: boolean; aiMode: string; users: number; superAdmins: number; tenantsWithDetectionEnabled: number; conversations: number; drafts: number; approvals: number; }
@@ -44,5 +47,7 @@ export const aiApi = {
   approve: (id: string, quoteId: string) => req<{ deliveryId: string; trackingId?: string; checkout?: { checkout_url: string }; note?: string }>(`/ai/drafts/${id}/approve`, { method: 'POST', body: JSON.stringify({ quoteId }) }),
   reject: (id: string) => req(`/ai/drafts/${id}/reject`, { method: 'POST', body: '{}' }),
   audit: () => req<AiAudit[]>('/ai/audit'),
-  simulateInbound: (text: string) => req<{ simulated: boolean; aiMode: string; conversationId: string }>('/ai/simulate-inbound', { method: 'POST', body: JSON.stringify({ text }) }),
+  senderProfile: () => req<SenderProfile>('/ai/sender-profile'),
+  updateSenderProfile: (body: SenderProfileInput) => req<SenderProfile>('/ai/sender-profile', { method: 'PATCH', body: JSON.stringify(body) }),
+  simulateInbound: (text: string, sender?: SenderProfileInput, saveSenderToProfile = true) => req<SimulateResult>('/ai/simulate-inbound', { method: 'POST', body: JSON.stringify({ text, sender, saveSenderToProfile }) }),
 };
