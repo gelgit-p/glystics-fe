@@ -26,6 +26,12 @@ export interface AiAudit { id: string; actorType: string; action: string; entity
 export interface SenderProfile { senderName: string | null; senderPhone: string | null; senderAddress: string | null; senderEmail: string | null; }
 export interface SenderProfileInput { senderName?: string; senderPhone?: string; senderAddress?: string; senderEmail?: string; }
 export interface SimulateResult { simulated: boolean; aiMode: string; conversationId: string; senderProfile: SenderProfile; draft: AiDraft | null; }
+export interface PaymentCheckResult {
+  deliveryId?: string; trackingId?: string; checkoutUrl?: string | null;
+  paymentStatus: string; bookingStatus?: string | null; deliveryStatus?: string | null;
+  shipbubbleOrderId?: string | null; trackingUrl?: string | null; bookingError?: string | null;
+  providerStatus?: string; checked: boolean; labelCreated: boolean; draftStatus: string; message: string;
+}
 export interface AiSettings { aiDeliveryDetectionEnabled: boolean; globalEnabled: boolean; effectiveEnabled: boolean; role: 'USER' | 'SUPER_ADMIN'; aiMode: 'live' | 'demo'; }
 export interface AdminUser { id: string; email: string; businessName: string; role: 'USER' | 'SUPER_ADMIN'; aiDeliveryDetectionEnabled: boolean; createdAt: string; _count: { aiConversations: number; deliveryDrafts: number }; }
 export interface AdminOverview { globalEnabled: boolean; aiMode: string; users: number; superAdmins: number; tenantsWithDetectionEnabled: number; conversations: number; drafts: number; approvals: number; }
@@ -47,6 +53,7 @@ export const aiApi = {
   quoteOffer: (id: string) => req<{ message: string; quotes: AiQuote[] }>(`/ai/drafts/${id}/quote-offer`),
   sendQuote: (id: string, message?: string) => req<{ sent: boolean; draft: AiDraft; message: string; waMessageId: string }>(`/ai/drafts/${id}/send-quote`, { method: 'POST', body: JSON.stringify({ message }) }),
   sendPaymentLink: (id: string) => req<{ sent: boolean; deliveryId: string; trackingId?: string; checkoutUrl: string; message: string }>(`/ai/drafts/${id}/send-payment-link`, { method: 'POST', body: '{}' }),
+  checkPayment: (id: string) => req<PaymentCheckResult>(`/ai/drafts/${id}/check-payment`, { method: 'POST', body: '{}' }),
   approvals: () => req<AiDraft[]>('/ai/approvals'),
   approve: (id: string, quoteId: string) => req<{ deliveryId: string; trackingId?: string; checkout?: { checkout_url: string }; note?: string }>(`/ai/drafts/${id}/approve`, { method: 'POST', body: JSON.stringify({ quoteId }) }),
   reject: (id: string) => req(`/ai/drafts/${id}/reject`, { method: 'POST', body: '{}' }),
