@@ -43,6 +43,19 @@ function useCreditAccess() {
   return data?.hasPurchasedCredits === true;
 }
 
+const CREDIT_LOCKED_ROUTES = [
+  '/deliveries',
+  '/notifications',
+  '/templates',
+  '/automations',
+  '/whatsapp',
+  '/ai',
+  '/ai/inbox',
+  '/ai/drafts',
+  '/ai/approvals',
+  '/ai/audit',
+];
+
 const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/deliveries', label: 'Deliveries', icon: Package },
@@ -85,9 +98,7 @@ export function Sidebar({ collapsed, setCollapsed }: { collapsed: boolean; setCo
       <nav className="flex-1 space-y-1 overflow-y-auto scrollbar-thin p-3">
         {navItems.map((item) => {
           const active = location.pathname.startsWith(item.to);
-          const creditLocked =
-            ['/deliveries', '/notifications', '/templates', '/automations', '/whatsapp'].includes(item.to) &&
-            !hasPurchasedCredits;
+          const creditLocked = CREDIT_LOCKED_ROUTES.includes(item.to) && !hasPurchasedCredits;
           if (creditLocked) {
             return (
               <button
@@ -170,9 +181,7 @@ export function MobileSidebar({ open, onClose }: { open: boolean; onClose: () =>
         <nav className="flex-1 space-y-1 overflow-y-auto scrollbar-thin p-3">
           {navItems.map((item) => {
             const active = location.pathname.startsWith(item.to);
-            const creditLocked =
-              ['/deliveries', '/notifications', '/templates', '/automations', '/whatsapp'].includes(item.to) &&
-              !hasPurchasedCredits;
+              const creditLocked = CREDIT_LOCKED_ROUTES.includes(item.to) && !hasPurchasedCredits;
             if (creditLocked) {
               return (
                 <button

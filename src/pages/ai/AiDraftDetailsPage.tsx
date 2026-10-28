@@ -32,7 +32,7 @@ export default function AiDraftDetailsPage() {
     else if (!quoteId && data?.quotes?.[0]) setQuoteId(data.quotes[0].id);
   }, [data?.customerSelectedQuoteId, data?.quotes, quoteId]);
   const offer = useQuery({ queryKey: ['ai-quote-offer', id, data?.quotes?.length], queryFn: () => aiApi.quoteOffer(id), enabled: !!data?.quotes?.length });
-  const paymentLinkSentEarly = data?.status === 'PAYMENT_LINK_SENT';
+  const paymentLinkSentEarly = data?.status === 'PAYMENT_LINK_SENT'; // false when BOOKED, so polling stops
   useEffect(() => {
     if (!paymentLinkSentEarly || checkPayment.isPending) return;
     const timer = setTimeout(() => checkPayment.mutate(), 1200);
@@ -62,11 +62,13 @@ export default function AiDraftDetailsPage() {
   const customerSelected = data.status === 'CUSTOMER_SELECTED' || data.status === 'PAYMENT_LINK_SENT';
   const paymentLinkSent = data.status === 'PAYMENT_LINK_SENT';
   const booked = data.status === 'BOOKED';
+  const locked = booked; // Payment made + label created: draft is read-only.
   const selectedQuote = data.quotes?.find((q) => q.id === data.customerSelectedQuoteId);
   return (
     <div>
       <PageHeader title="Delivery Draft" description="Review extracted details, compare Shipbubble couriers, send quote options to the customer, then approve after selection."><DraftStatus status={data.status} /></PageHeader>
       <DemoBanner />
+      {locked && <div className="mb-4 rounded-md border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-900"><strong>Booked — read only.</strong> Payment was completed after the customer selected an option and the Shipbubble shipping/label request was created. All editing, quote, payment-link, approval and rejection actions are disabled.</div>}
       {data.missingFields.length > 0 && <div className="mb-4 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">Missing before quotes: {data.missingFields.join(', ')}{data.missingFields.some((f) => f.startsWith('sender')) && <> — sender details come from your profile: set them in <a className="underline" href="/settings/profile">Profile settings</a> or fill them below and save.</>}</div>}
       {awaitingCustomer && <div className="mb-4 rounded-md border border-blue-300 bg-blue-50 p-3 text-sm text-blue-900">Quote sent to the customer on WhatsApp{data.quoteOfferSentAt ? ` at ${new Date(data.quoteOfferSentAt).toLocaleString()}` : ''}. Waiting for them to reply with an option number. This page refreshes automatically.</div>}
       {customerSelected && selectedQuote && <div className="mb-4 rounded-md border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-900">Customer selected: <strong>{selectedQuote.courierName} — {money(selectedQuote.amount, selectedQuote.currency)}</strong>{data.customerSelectionAt ? ` at ${new Date(data.customerSelectionAt).toLocaleString()}` : ''}. {paymentLinkSent ? 'Payment link has been sent to the customer in WhatsApp chat.' : 'Payment link will be texted to the customer automatically; you can also resend it below.'}</div>}
@@ -90,21 +92,21 @@ export default function AiDraftDetailsPage() {
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="rounded-lg border bg-card p-4">
           <h2 className="mb-3 font-semibold">Extracted details {data.confidence != null && <span className="text-sm text-muted-foreground">(confidence {Math.round(data.confidence * 100)}%)</span>}</h2>
-          <div className="grid gap-3 sm:grid-cols-2">{FIELDS.map((f) => <label key={f} className="text-sm">{f}<input className="mt-1 w-full rounded-md border p-2" value={form[f] ?? ''} onChange={(e) => setForm({ ...form, [f]: e.target.value })} /></label>)}</div>
-          <div className="mt-4 flex gap-2"><button className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground" onClick={() => save.mutate()}>Save corrections</button>
-          <button className="rounded-md border px-4 py-2 text-sm disabled:opacity-50" disabled={!!data.missingFields.length || quotes.isPending} onClick={() => quotes.mutate()}>Fetch Shipbubble quotes</button></div>
+          <div className="grid gap-3 sm:grid-cols-2">{FIELDS.map((f) => <label key={f} className="text-sm">{f}<input className="mt-1 w-full rounded-md border p-2 disabled:cursor-not-allowed disabled:bg-muted disabled:opacity-70" disabled={locked} value={form[f] ?? ''} onChange={(e) => setForm({ ...form, [f]: e.target.value })} /></label>)}</div>
+          <div className="mt-4 flex gap-2"><button className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50" disabled={locked || save.isPending} onClick={() => save.mutate()}>Save corrections</button>
+          <button className="rounded-md border px-4 py-2 text-sm disabled:opacity-50" disabled={locked || !!data.missingFields.length || quotes.isPending} onClick={() => quotes.mutate()}>Fetch Shipbubble quotes</button></div>
         </div>
         <div className="space-y-4">
           <div className="rounded-lg border bg-card p-4">
             <h2 className="mb-3 font-semibold">Provider quotes (Shipbubble couriers)</h2>
             {data.quotes?.length ? <div className="space-y-2">{data.quotes.map((q, i) => (
-              <label key={q.id} className="flex cursor-pointer items-center justify-between rounded-md border p-3 text-sm">
-                <span><input type="radio" name="quote" className="mr-2" checked={quoteId === q.id} onChange={() => setQuoteId(q.id)} /><strong>{i + 1}. {q.courierName}</strong> · {q.serviceCode}{i === 0 && <span className="ml-2 rounded bg-green-100 px-2 py-0.5 text-xs text-green-800">Recommended</span>}{data.customerSelectedQuoteId === q.id && <span className="ml-2 rounded bg-emerald-100 px-2 py-0.5 text-xs text-emerald-800">Customer selected</span>}<br /><span className="text-muted-foreground">{q.scoreReasons.join(' · ')}{q.deliveryEta ? ` · ETA ${q.deliveryEta}` : ''}</span></span>
+              <label key={q.id} className={`flex items-center justify-between rounded-md border p-3 text-sm ${locked ? 'cursor-not-allowed opacity-80' : 'cursor-pointer'}`}>
+                <span><input type="radio" name="quote" className="mr-2" disabled={locked} checked={quoteId === q.id} onChange={() => setQuoteId(q.id)} /><strong>{i + 1}. {q.courierName}</strong> · {q.serviceCode}{i === 0 && <span className="ml-2 rounded bg-green-100 px-2 py-0.5 text-xs text-green-800">Recommended</span>}{data.customerSelectedQuoteId === q.id && <span className="ml-2 rounded bg-emerald-100 px-2 py-0.5 text-xs text-emerald-800">Customer selected</span>}<br /><span className="text-muted-foreground">{q.scoreReasons.join(' · ')}{q.deliveryEta ? ` · ETA ${q.deliveryEta}` : ''}</span></span>
                 <strong>{money(q.amount, q.currency)}</strong>
               </label>))}
               {recommended && !quoteId && <p className="text-sm text-muted-foreground">Recommended: {recommended.courierName} ({money(recommended.amount, recommended.currency)}) — select it or another quote to approve.</p>}
-              <div className="flex flex-wrap gap-2 pt-2"><button className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-50" disabled={!quoteId || approve.isPending || awaitingCustomer} onClick={() => approve.mutate()}>{customerSelected ? 'Approve customer selection' : 'Approve & create delivery'}</button><button className="rounded-md bg-emerald-600 px-4 py-2 text-sm text-white disabled:opacity-50" disabled={sendPaymentLink.isPending || awaitingCustomer || (!customerSelected && !data.deliveryId)} onClick={() => sendPaymentLink.mutate()}>{paymentLinkSent ? 'Resend payment link in chat' : 'Send payment link in chat'}</button>
-              <button className="rounded-md border border-destructive px-4 py-2 text-sm text-destructive" onClick={() => reject.mutate()}>Reject</button></div>
+              <div className="flex flex-wrap gap-2 pt-2"><button className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50" disabled={locked || !quoteId || approve.isPending || awaitingCustomer} onClick={() => approve.mutate()}>{customerSelected ? 'Approve customer selection' : 'Approve & create delivery'}</button><button className="rounded-md bg-emerald-600 px-4 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-50" disabled={locked || sendPaymentLink.isPending || awaitingCustomer || (!customerSelected && !data.deliveryId)} onClick={() => sendPaymentLink.mutate()}>{paymentLinkSent ? 'Resend payment link in chat' : 'Send payment link in chat'}</button>
+              <button className="rounded-md border border-destructive px-4 py-2 text-sm text-destructive disabled:cursor-not-allowed disabled:opacity-50" disabled={locked || reject.isPending} onClick={() => reject.mutate()}>Reject</button></div>
               <p className="text-xs text-muted-foreground">When the customer replies with an option number, Dispatchly automatically creates the delivery/checkout and texts the payment link to them in WhatsApp. Owner approval remains available as a manual fallback. Shipbubble booking happens only after payment completes.</p>
             </div> : <p className="text-sm text-muted-foreground">No quotes yet. Complete missing fields, then fetch quotes.</p>}
             {data.deliveryId && <p className="mt-3 text-sm">Delivery record: <a className="text-primary underline" href={`/deliveries/${data.deliveryId}`}>{data.deliveryId}</a></p>}
@@ -113,10 +115,10 @@ export default function AiDraftDetailsPage() {
           <div className="rounded-lg border bg-card p-4">
             <h2 className="font-semibold">Send quote to customer on WhatsApp</h2>
             <p className="mt-1 text-sm text-muted-foreground">This numbered message is exactly what the customer receives. They reply with only the option number (e.g. <strong>1</strong>); Dispatchly AI records their selection on this draft for owner approval.</p>
-            <textarea className="mt-3 w-full whitespace-pre-wrap rounded-md border bg-muted/30 p-3 text-sm" rows={12} value={offer.isLoading ? 'Loading quote message...' : quoteMessage} onChange={(e) => setQuoteMessage(e.target.value)} />
+            <textarea className="mt-3 w-full whitespace-pre-wrap rounded-md border bg-muted/30 p-3 text-sm disabled:cursor-not-allowed disabled:opacity-70" rows={12} disabled={locked} value={offer.isLoading ? 'Loading quote message...' : quoteMessage} onChange={(e) => setQuoteMessage(e.target.value)} />
             <div className="mt-3 flex flex-wrap gap-2">
-              <button className="rounded-md bg-emerald-600 px-4 py-2 text-sm text-white disabled:opacity-50" disabled={!data.quotes?.length || sendQuote.isPending || !data.conversationId} onClick={() => sendQuote.mutate()}>{awaitingCustomer ? 'Resend quote to customer' : 'Send quote to customer'}</button>
-              <button className="rounded-md border px-4 py-2 text-sm" disabled={!offer.data?.message} onClick={() => setQuoteMessage(offer.data?.message ?? '')}>Reset message</button>
+              <button className="rounded-md bg-emerald-600 px-4 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-50" disabled={locked || !data.quotes?.length || sendQuote.isPending || !data.conversationId} onClick={() => sendQuote.mutate()}>{awaitingCustomer ? 'Resend quote to customer' : 'Send quote to customer'}</button>
+              <button className="rounded-md border px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50" disabled={locked || !offer.data?.message} onClick={() => setQuoteMessage(offer.data?.message ?? '')}>Reset message</button>
             </div>
             {!data.conversationId && <p className="mt-2 text-sm text-amber-600">This draft is not linked to a WhatsApp conversation, so there is no customer to send to.</p>}
           </div>
