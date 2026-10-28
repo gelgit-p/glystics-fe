@@ -118,7 +118,6 @@ export default function AiDraftDetailsPage() {
             <textarea className="mt-3 w-full whitespace-pre-wrap rounded-md border bg-muted/30 p-3 text-sm disabled:cursor-not-allowed disabled:opacity-70" rows={12} disabled={locked} value={offer.isLoading ? 'Loading quote message...' : quoteMessage} onChange={(e) => setQuoteMessage(e.target.value)} />
             <div className="mt-3 flex flex-wrap gap-2">
               <button className="rounded-md bg-emerald-600 px-4 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-50" disabled={locked || !data.quotes?.length || sendQuote.isPending || !data.conversationId} onClick={() => sendQuote.mutate()}>{awaitingCustomer ? 'Resend quote to customer' : 'Send quote to customer'}</button>
-              <button className="rounded-md border px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50" disabled={locked || !offer.data?.message} onClick={() => setQuoteMessage(offer.data?.message ?? '')}>Reset message</button>
             </div>
             {!data.conversationId && <p className="mt-2 text-sm text-amber-600">This draft is not linked to a WhatsApp conversation, so there is no customer to send to.</p>}
           </div>
