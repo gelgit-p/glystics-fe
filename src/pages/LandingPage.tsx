@@ -11,13 +11,23 @@ import {
   Webhook,
   Check,
   ChevronRight,
-  MapPin,
   Smartphone,
   Coins,
+  Sparkles,
+  Bot,
+  ClipboardCheck,
+  MousePointerClick,
+  ShieldCheck,
+  Wallet,
+  FileText,
 } from 'lucide-react';
 import { CREDIT_PACKAGE_OFFERS, formatNaira } from '@/lib/credit-packages';
 
 const features = [
+  { icon: Sparkles, title: 'Dispatchly AI agent', desc: 'An AI agent that reads WhatsApp conversations, detects delivery intent, and prepares deliveries for you.' },
+  { icon: Bot, title: 'Automatic detail extraction', desc: 'Receiver, address, package, weight, value and pickup date extracted from chat — missing details are asked for automatically.' },
+  { icon: ClipboardCheck, title: 'Courier quotes in chat', desc: 'Shipbubble courier prices are sent to the customer on WhatsApp. They reply with an option number to choose.' },
+  { icon: MousePointerClick, title: 'Human approval, always', desc: 'Nothing is booked without your approval. AI prepares drafts; you confirm before credits, checkout and labels.' },
   { icon: Bell, title: 'Automated delivery notifications', desc: 'Trigger WhatsApp messages automatically at every stage of the delivery journey.' },
   { icon: MessageCircle, title: 'WhatsApp Business integration', desc: 'Connect your WhatsApp Business account and start sending in minutes.' },
   { icon: Truck, title: 'Real-time shipment tracking', desc: 'Track every shipment from pickup to delivery with live status updates.' },
@@ -28,7 +38,7 @@ const features = [
   { icon: Webhook, title: 'Webhooks', desc: 'Get real-time callbacks for every message and delivery event.' },
 ];
 
-const workflow = ['Order Created', 'Order Confirmed', 'Picked Up', 'In Transit', 'Completed', 'Cancelled'];
+const workflow = ['WhatsApp Request', 'AI Draft Created', 'Quotes Sent', 'Customer Selected', 'Payment Confirmed', 'Label Booked', 'Picked Up', 'In Transit', 'Completed'];
 
 export default function LandingPage() {
   const buyCreditsPath = localStorage.getItem('accessToken')
@@ -47,6 +57,7 @@ export default function LandingPage() {
             <span className="text-lg font-bold">dispatchly</span>
           </div>
           <div className="hidden items-center gap-8 md:flex">
+            <a href="#ai-agent" className="text-sm font-medium text-muted-foreground hover:text-foreground">AI Agent</a>
             <a href="#features" className="text-sm font-medium text-muted-foreground hover:text-foreground">Features</a>
             <a href="#how-it-works" className="text-sm font-medium text-muted-foreground hover:text-foreground">How it works</a>
             <a href="#workflow" className="text-sm font-medium text-muted-foreground hover:text-foreground">Workflow</a>
@@ -69,27 +80,27 @@ export default function LandingPage() {
           <div className="mx-auto max-w-3xl text-center">
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-white px-4 py-1.5 text-sm font-medium text-muted-foreground shadow-sm">
               <span className="h-2 w-2 rounded-full bg-primary" />
-              Built for logistics businesses
+              New · Dispatchly AI agent for WhatsApp deliveries
             </div>
             <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-              WhatsApp notifications built for modern logistics.
+              Your AI delivery agent on WhatsApp.
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
-              Keep senders and receivers informed at every step of the delivery journey with automated WhatsApp notifications.
+              Dispatchly AI reads customer WhatsApp chats, extracts delivery details, sends courier quotes, takes the customer’s choice, and prepares payment and booking — with your approval at every consequential step.
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Link
                 to="/register"
                 className="inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-sm transition-all hover:bg-primary/90 hover:shadow-md"
               >
-                Get Started <ArrowRight className="h-4 w-4" />
+                Try Dispatchly AI <ArrowRight className="h-4 w-4" />
               </Link>
-              <Link
-                to="/dashboard"
+              <a
+                href="#ai-agent"
                 className="inline-flex items-center gap-2 rounded-lg border border-border bg-white px-6 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
               >
-                View Demo
-              </Link>
+                See how it works
+              </a>
             </div>
           </div>
 
@@ -151,20 +162,87 @@ export default function LandingPage() {
         </div>
       </section>
 
+
+      {/* Dispatchly AI agent */}
+      <section id="ai-agent" className="border-t border-border py-20">
+        <div className="mx-auto max-w-7xl px-4 lg:px-8">
+          <div className="grid items-center gap-12 lg:grid-cols-2">
+            <div>
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
+                <Sparkles className="h-3.5 w-3.5" /> Dispatchly AI
+              </div>
+              <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">From WhatsApp chat to booked delivery — automatically.</h2>
+              <p className="mt-4 text-muted-foreground">
+                Customers already order on WhatsApp. Dispatchly AI turns those conversations into validated, priced, trackable deliveries without your team copying details into forms.
+              </p>
+              <ul className="mt-6 space-y-4">
+                {[
+                  { icon: MessageCircle, title: 'Detects delivery requests in chat', desc: 'Understands intent in inbound WhatsApp messages and starts a delivery draft instantly.' },
+                  { icon: FileText, title: 'Extracts & completes the details', desc: 'Pulls receiver, address, package, weight, value and pickup date — and politely asks for anything missing.' },
+                  { icon: Truck, title: 'Sends courier quotes to the customer', desc: 'Live Shipbubble courier prices are messaged to the customer, who replies with an option number.' },
+                  { icon: Wallet, title: 'Payment link in the same chat', desc: 'On selection, the payment link is texted back automatically. Booking happens only after payment confirms.' },
+                  { icon: ShieldCheck, title: 'You stay in control', desc: 'Review drafts, compare quotes, approve or reject. Turn AI detection on or off per account in Automations.' },
+                ].map((item) => (
+                  <li key={item.title} className="flex gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground"><item.icon className="h-4 w-4" /></div>
+                    <div><h3 className="font-semibold">{item.title}</h3><p className="text-sm text-muted-foreground">{item.desc}</p></div>
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-8 flex flex-wrap gap-3">
+                <Link to="/register" className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90">
+                  Start with AI <ArrowRight className="h-4 w-4" />
+                </Link>
+                <a href="#how-it-works" className="inline-flex items-center gap-2 rounded-lg border border-border px-5 py-2.5 text-sm font-semibold hover:bg-muted">See the workflow</a>
+              </div>
+            </div>
+
+            {/* WhatsApp conversation demo (illustrative) */}
+            <div className="mx-auto w-full max-w-md">
+              <div className="overflow-hidden rounded-2xl border border-border bg-[#ece5dd] shadow-xl">
+                <div className="flex items-center gap-3 bg-[#075e54] px-4 py-3 text-white">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/20"><MessageCircle className="h-5 w-5" /></div>
+                  <div><p className="text-sm font-semibold">Your Business · WhatsApp</p><p className="text-xs text-white/70">Dispatchly AI active</p></div>
+                </div>
+                <div className="space-y-3 p-4 text-sm">
+                  <div className="ml-auto max-w-[85%] rounded-lg rounded-tr-none bg-white p-3 shadow-sm">
+                    Please deliver a laptop to Ada Lovelace 08028520094 at 55, Herbert Macaulay Way, Yaba, Lagos, 2kg worth 500000, pickup 2026-10-30
+                  </div>
+                  <div className="max-w-[85%] rounded-lg rounded-tl-none bg-[#dcf8c6] p-3 shadow-sm">
+                    🚚 <strong>Delivery quote options</strong><br /><br />
+                    1. <strong>Millie Express</strong> — NGN 1,453 · ETA 2 days<br />
+                    2. <strong>DHL Express</strong> — NGN 3,900 · ETA 1 day<br /><br />
+                    Reply with the <strong>number</strong> of the option you want (for example: 1).
+                  </div>
+                  <div className="ml-auto w-fit rounded-lg rounded-tr-none bg-white px-4 py-2 font-semibold shadow-sm">1</div>
+                  <div className="max-w-[85%] rounded-lg rounded-tl-none bg-[#dcf8c6] p-3 shadow-sm">
+                    ✅ You selected option 1: Millie Express.<br /><br />
+                    Please complete payment using this secure link:<br />
+                    <span className="text-blue-700 underline">checkout.dispatchly…/pay</span><br /><br />
+                    Your shipment will be booked after payment is confirmed.
+                  </div>
+                </div>
+                <p className="border-t border-border bg-white px-4 py-2 text-center text-xs text-muted-foreground">Illustrative conversation. Prices shown are examples, not live quotes.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* How it works */}
       <section id="how-it-works" className="border-t border-border py-20">
         <div className="mx-auto max-w-5xl px-4 lg:px-8">
           <div className="mb-12 text-center">
             <h2 className="text-3xl font-bold tracking-tight">How it works</h2>
-            <p className="mt-2 text-muted-foreground">From delivery creation to customer notification in five simple steps.</p>
+            <p className="mt-2 text-muted-foreground">From a WhatsApp message to a booked, trackable delivery — with your approval built in.</p>
           </div>
           <div className="space-y-0">
             {[
-              { icon: Package, title: 'Create Delivery', desc: 'Log a new delivery with sender and receiver details.' },
-              { icon: Truck, title: 'Track Shipment', desc: 'Monitor the shipment as it moves through each stage.' },
-              { icon: Bell, title: 'Delivery Event', desc: 'An event triggers when the shipment status changes.' },
-              { icon: MessageCircle, title: 'WhatsApp Notification', desc: 'A WhatsApp message is sent automatically to the customer.' },
-              { icon: Check, title: 'Customer', desc: 'The customer receives real-time updates on their delivery.' },
+              { icon: MessageCircle, title: 'Customer chats you', desc: 'A customer sends a normal WhatsApp message asking for a delivery.' },
+              { icon: Sparkles, title: 'AI extracts the details', desc: 'Dispatchly AI detects the request, fills the draft, and asks for anything missing.' },
+              { icon: Truck, title: 'Quotes go back on WhatsApp', desc: 'Courier prices are sent in chat; the customer replies with an option number.' },
+              { icon: ClipboardCheck, title: 'You approve; customer pays', desc: 'Review the draft, approve, and the payment link is texted automatically. Labels are created only after payment confirms.' },
+              { icon: Check, title: 'Tracked to completion', desc: 'Pickup, transit and delivery updates flow back to the customer on WhatsApp.' },
             ].map((step, i) => (
               <div key={step.title} className="flex items-center gap-4">
                 <div className="flex flex-col items-center">
@@ -187,8 +265,8 @@ export default function LandingPage() {
       <section id="features" className="border-t border-border bg-muted/30 py-20">
         <div className="mx-auto max-w-7xl px-4 lg:px-8">
           <div className="mb-12 text-center">
-            <h2 className="text-3xl font-bold tracking-tight">Everything you need to keep customers informed</h2>
-            <p className="mt-2 text-muted-foreground">A complete communication platform built for logistics operations.</p>
+            <h2 className="text-3xl font-bold tracking-tight">Everything you need to deliver, without the manual work</h2>
+            <p className="mt-2 text-muted-foreground">AI delivery automation plus a complete communication platform for logistics operations.</p>
           </div>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {features.map((f) => (
@@ -277,16 +355,16 @@ export default function LandingPage() {
       <section className="border-t border-border bg-primary py-20">
         <div className="mx-auto max-w-3xl px-4 text-center lg:px-8">
           <h2 className="text-3xl font-bold tracking-tight text-primary-foreground">
-            Start communicating with your customers automatically.
+            Let AI turn WhatsApp chats into deliveries.
           </h2>
           <p className="mt-3 text-primary-foreground/80">
-            Join logistics companies using dispatchly to keep customers informed at every step.
+            Connect WhatsApp, enable Dispatchly AI, and approve your first AI-prepared delivery today.
           </p>
           <Link
             to="/register"
             className="mt-8 inline-flex items-center gap-2 rounded-lg bg-white px-6 py-3 text-sm font-semibold text-primary shadow-sm transition-colors hover:bg-white/90"
           >
-            Get Started for N500 <ArrowRight className="h-4 w-4" />
+            Start with Dispatchly AI <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
       </section>
@@ -300,7 +378,7 @@ export default function LandingPage() {
             </div>
             <span className="font-semibold">dispatchly</span>
           </div>
-          <p className="text-sm text-muted-foreground">WhatsApp notifications for modern logistics.</p>
+          <p className="text-sm text-muted-foreground">AI delivery automation & WhatsApp notifications for modern logistics.</p>
         </div>
       </footer>
     </div>
