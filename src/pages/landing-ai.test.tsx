@@ -17,5 +17,7 @@ describe('Landing page advertises Dispatchly AI agent', () => {
     expect(screen.getByText(/You stay in control/i)).toBeInTheDocument();
     expect(screen.getByText(/Illustrative conversation/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Start with AI/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /\+234 802 852 0094/i })).toHaveAttribute('href', 'tel:+2348028520094');
+    expect(screen.getByText(/2A Beach Road, Ojo, Lagos, Nigeria/i)).toBeInTheDocument();
   });
 });

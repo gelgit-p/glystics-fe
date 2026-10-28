@@ -11,6 +11,8 @@ import {
   Webhook,
   Check,
   ChevronRight,
+  MapPin,
+  Phone,
   Smartphone,
   Coins,
   Sparkles,
@@ -371,14 +373,24 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer className="border-t border-border bg-white py-10">
-        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 sm:flex-row lg:px-8">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <MessageCircle className="h-4 w-4" />
+        <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 lg:px-8">
+          <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                <MessageCircle className="h-4 w-4" />
+              </div>
+              <span className="font-semibold">dispatchly</span>
             </div>
-            <span className="font-semibold">dispatchly</span>
+            <p className="text-sm text-muted-foreground">AI delivery automation & WhatsApp notifications for modern logistics.</p>
           </div>
-          <p className="text-sm text-muted-foreground">AI delivery automation & WhatsApp notifications for modern logistics.</p>
+          <address className="flex flex-col items-center gap-2 border-t border-border pt-6 text-center text-sm not-italic text-muted-foreground sm:flex-row sm:justify-between sm:text-left">
+            <a href="tel:+2348028520094" className="inline-flex items-center gap-2 font-medium text-foreground hover:text-primary">
+              <Phone className="h-4 w-4 text-primary" /> +234 802 852 0094
+            </a>
+            <span className="inline-flex items-center gap-2">
+              <MapPin className="h-4 w-4 shrink-0 text-primary" /> 2A Beach Road, Ojo, Lagos, Nigeria
+            </span>
+          </address>
         </div>
       </footer>
     </div>
