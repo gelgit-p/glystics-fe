@@ -17,9 +17,10 @@ import {
   FileText,
   CheckCircle2,
   History,
+  Home,
+  MoreHorizontal,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useState } from 'react';
 import { authenticatedFetch as fetch } from '@/lib/authenticated-fetch';
 
 function useCreditAccess() {
@@ -70,6 +71,42 @@ const navItems = [
   { to: '/ai/audit', label: 'AI Audit', icon: History },
   { to: '/billing', label: 'Billing', icon: CreditCard },
 ];
+
+const bottomTabs = [
+  { to: '/dashboard', label: 'Home', icon: Home },
+  { to: '/deliveries', label: 'Deliveries', icon: Package },
+  { to: '/automations', label: 'Automation', icon: Zap },
+  { to: '/billing', label: 'Credits', icon: CreditCard },
+];
+
+export function MobileBottomNav({ onMore }: { onMore: () => void }) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const hasPurchasedCredits = useCreditAccess();
+  const moreActive = ['/ai', '/whatsapp', '/notifications', '/templates', '/settings'].some((x) => location.pathname.startsWith(x));
+  return (
+    <nav aria-label="Primary" className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
+      <div className="grid grid-cols-5">
+        {bottomTabs.map((item) => {
+          const active = location.pathname.startsWith(item.to);
+          const locked = CREDIT_LOCKED_ROUTES.includes(item.to) && !hasPurchasedCredits;
+          return (
+            <button key={item.to} type="button" aria-current={active ? 'page' : undefined} aria-label={locked ? `${item.label}, locked. Purchase credits to unlock` : item.label}
+              onClick={() => navigate(locked ? '/billing?purchaseRequired=true' : item.to)}
+              className={`flex min-h-[56px] flex-col items-center justify-center gap-1 px-1 text-[11px] font-medium ${active ? 'text-primary' : 'text-muted-foreground'} ${locked ? 'opacity-50' : ''}`}>
+              <span className="relative"><item.icon className="h-5 w-5" />{locked && <LockKeyhole className="absolute -right-2 -top-1 h-3 w-3" />}</span>
+              <span>{item.label}</span>
+            </button>
+          );
+        })}
+        <button type="button" aria-current={moreActive ? 'page' : undefined} aria-label="More sections" onClick={onMore}
+          className={`flex min-h-[56px] flex-col items-center justify-center gap-1 px-1 text-[11px] font-medium ${moreActive ? 'text-primary' : 'text-muted-foreground'}`}>
+          <MoreHorizontal className="h-5 w-5" /><span>More</span>
+        </button>
+      </div>
+    </nav>
+  );
+}
 
 export function Sidebar({ collapsed, setCollapsed }: { collapsed: boolean; setCollapsed: (v: boolean) => void }) {
   const location = useLocation();

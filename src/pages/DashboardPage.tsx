@@ -9,6 +9,8 @@ import {
   Send,
   ArrowRight,
   TrendingUp,
+  CreditCard,
+  Sparkles,
 } from 'lucide-react';
 import {
   AreaChart,
@@ -148,6 +150,17 @@ export default function DashboardPage() {
     },
   });
 
+  const walletQuery = useQuery({
+    queryKey: ['credit-wallet', userId],
+    queryFn: async () => {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/credits/wallet`, { headers: { accept: '*/*' } });
+      if (!response.ok) throw new Error('Could not load credit wallet');
+      return response.json() as Promise<{ balance: number; hasPurchasedCredits: boolean; lowBalance?: boolean }>;
+    },
+    enabled: Boolean(userId),
+    staleTime: 15_000,
+  });
+
   const recent = deliveries?.slice(0, 6) ?? [];
   const stats = analyticsQuery.data;
   const statValue = (value?: number) =>
@@ -162,6 +175,23 @@ export default function DashboardPage() {
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">Here's what's happening with your deliveries today.</p>
       </div>
+
+      {/* Mobile-first quick actions + credits */}
+      <section aria-label="Quick actions" className="rounded-xl border border-border bg-card p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-sm text-muted-foreground">Available credits</p>
+            <p className="text-2xl font-bold">{walletQuery.isLoading ? '—' : (walletQuery.data?.balance ?? 0).toLocaleString()}</p>
+            {walletQuery.isError && <p className="text-xs text-destructive">Credit balance unavailable</p>}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link to="/deliveries"><Button><Package className="mr-2 h-4 w-4" /> Create delivery</Button></Link>
+            <Link to="/deliveries"><Button variant="outline">View deliveries</Button></Link>
+            <Link to="/billing"><Button variant="outline"><CreditCard className="mr-2 h-4 w-4" /> Manage credits</Button></Link>
+            <Link to="/ai"><Button variant="outline"><Sparkles className="mr-2 h-4 w-4" /> AI detection</Button></Link>
+          </div>
+        </div>
+      </section>
 
       {/* Delivery stats */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -262,6 +292,17 @@ export default function DashboardPage() {
         {isLoading ? (
           <LoadingState />
         ) : (
+          <>
+          <div className="space-y-3 p-4 sm:hidden" aria-label="Recent deliveries mobile cards">
+            {recent.length === 0 ? <p className="text-sm text-muted-foreground">No deliveries yet.</p> : recent.map((d) => (
+              <Link key={d.id} to={`/deliveries/${d.id}`} className="block rounded-lg border border-border p-3">
+                <div className="flex items-center justify-between gap-2"><span className="font-mono text-xs font-medium">{d.trackingId}</span><StatusBadge status={d.status} /></div>
+                <p className="mt-2 text-sm font-medium">{d.receiverName}</p>
+                <p className="text-xs text-muted-foreground">{d.destination}</p>
+              </Link>
+            ))}
+          </div>
+          <div className="hidden sm:block">
           <Table>
             <TableHeader>
               <TableRow>
@@ -302,6 +343,8 @@ export default function DashboardPage() {
               ))}
             </TableBody>
           </Table>
+          </div>
+          </>
         )}
       </div>
     </div>
