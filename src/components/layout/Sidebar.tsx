@@ -115,8 +115,10 @@ export function Sidebar({ collapsed, setCollapsed }: { collapsed: boolean; setCo
 
   return (
     <aside
+      aria-label="Desktop navigation"
       className={cn(
-        'fixed left-0 top-0 z-40 flex h-screen flex-col border-r border-sidebar-border bg-sidebar transition-all duration-300',
+        // Mobile uses Topbar (hamburger drawer) + bottom nav; never overlay content with the rail.
+        'fixed left-0 top-0 z-40 hidden h-screen flex-col border-r border-sidebar-border bg-sidebar transition-all duration-300 lg:flex',
         collapsed ? 'w-[68px]' : 'w-64',
       )}
     >
