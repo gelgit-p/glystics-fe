@@ -114,7 +114,7 @@ export default function AiDraftDetailsPage() {
 
           <div className="rounded-lg border bg-card p-4">
             <h2 className="font-semibold">Send quote to customer on WhatsApp</h2>
-            <p className="mt-1 text-sm text-muted-foreground">This numbered message is exactly what the customer receives. They reply with only the option number (e.g. <strong>1</strong>); Dispatchly AI records their selection on this draft for owner approval.</p>
+            <p className="mt-1 text-sm text-muted-foreground">Quotes are generated on the backend and <strong>sent to the customer automatically</strong> as soon as they are ready. This preview is exactly what they receive; use the button only to resend. They reply with only the option number (e.g. <strong>1</strong>).</p>
             <textarea className="mt-3 w-full whitespace-pre-wrap rounded-md border bg-muted/30 p-3 text-sm disabled:cursor-not-allowed disabled:opacity-70" rows={12} disabled={locked} value={offer.isLoading ? 'Loading quote message...' : quoteMessage} onChange={(e) => setQuoteMessage(e.target.value)} />
             <div className="mt-3 flex flex-wrap gap-2">
               <button className="rounded-md bg-emerald-600 px-4 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-50" disabled={locked || !data.quotes?.length || sendQuote.isPending || !data.conversationId} onClick={() => sendQuote.mutate()}>{awaitingCustomer ? 'Resend quote to customer' : 'Send quote to customer'}</button>
