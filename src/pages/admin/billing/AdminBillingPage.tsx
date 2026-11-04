@@ -9,7 +9,7 @@ export default function AdminBillingPage() {
   const [page, setPage] = useState(1);
   const { data, isLoading, error, refetch } = useQuery({ queryKey: ['admin-billing', search, page], queryFn: () => adminApi.billing({ search: search || undefined, page, limit: 20 }) });
   const empty = <DataState isLoading={isLoading} error={error} items={data?.items} refetch={() => refetch()} emptyTitle="No transactions" emptyHint="Credit purchases from all users appear here." />;
-  if (empty) return <div><PageHeader title="Billing & Credits" description="Platform-wide billing visibility." /><div className="mb-4"><AdminSearch value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search reference, email, business..." /></div>{empty}</div>;
+  if (isLoading || error || !data?.items?.length) return <div><PageHeader title="Billing & Credits" description="Platform-wide billing visibility." /><div className="mb-4"><AdminSearch value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search reference, email, business..." /></div>{empty}</div>;
   return (
     <div>
       <PageHeader title="Billing & Credits" description="Transactions, balances, purchases, and payment status across all users." />

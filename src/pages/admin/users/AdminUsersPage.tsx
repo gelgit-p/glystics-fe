@@ -27,7 +27,7 @@ export default function AdminUsersPage() {
 
   const rows = (data?.items ?? []).filter((u) => roleFilter === 'ALL' || u.role === roleFilter);
   const empty = <DataState isLoading={isLoading} error={error} items={data?.items} refetch={() => refetch()} emptyTitle="No users found" emptyHint="Users appear here once they register in the user app." />;
-  if (empty) return <div><PageHeader title="Users" description="All registered tenants with roles, credits, and AI status." /><div className="mb-4 flex flex-wrap gap-3"><AdminSearch value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search name, business, email..." /></div>{empty}</div>;
+  if (isLoading || error || !data?.items?.length) return <div><PageHeader title="Users" description="All registered tenants with roles, credits, and AI status." /><div className="mb-4 flex flex-wrap gap-3"><AdminSearch value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search name, business, email..." /></div>{empty}</div>;
 
   return (
     <div>

@@ -11,7 +11,7 @@ export default function AdminNotificationsPage() {
   const [page, setPage] = useState(1);
   const { data, isLoading, error, refetch } = useQuery({ queryKey: ['admin-notifications', search, status, page], queryFn: () => adminApi.notifications({ search: search || undefined, status: status === 'ALL' ? undefined : status, page, limit: 20 }) });
   const empty = <DataState isLoading={isLoading} error={error} items={data?.items} refetch={() => refetch()} emptyTitle="No notifications" emptyHint="WhatsApp and delivery notifications from all users appear here." />;
-  if (empty) return <div><PageHeader title="Notifications" description="Platform notification history." /><Filters search={search} setSearch={(v) => { setSearch(v); setPage(1); }} status={status} setStatus={(v) => { setStatus(v); setPage(1); }} />{empty}</div>;
+  if (isLoading || error || !data?.items?.length) return <div><PageHeader title="Notifications" description="Platform notification history." /><Filters search={search} setSearch={(v) => { setSearch(v); setPage(1); }} status={status} setStatus={(v) => { setStatus(v); setPage(1); }} />{empty}</div>;
   return (
     <div>
       <PageHeader title="Notifications" description="WhatsApp notifications, delivery status updates, failures." />

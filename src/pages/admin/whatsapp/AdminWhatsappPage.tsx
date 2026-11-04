@@ -14,7 +14,7 @@ export default function AdminWhatsappPage() {
   const { data, isLoading, error, refetch } = useQuery({ queryKey: ['admin-whatsapp', search, page], queryFn: () => adminApi.whatsapp({ search: search || undefined, page, limit: 20 }) });
   const disconnect = useMutation({ mutationFn: (userId: string) => adminApi.disconnectWhatsapp(userId), onSuccess: () => { toast.success('WhatsApp disconnected'); qc.invalidateQueries({ queryKey: ['admin-whatsapp'] }); }, onError: (e) => toast.error(e instanceof Error ? e.message : 'Disconnect failed') });
   const empty = <DataState isLoading={isLoading} error={error} items={data?.items} refetch={() => refetch()} emptyTitle="No WhatsApp connections" emptyHint="Tenants with connected WhatsApp accounts appear here." />;
-  if (empty) return <div><PageHeader title="WhatsApp" description="Centralized WhatsApp integration view." /><div className="mb-4"><AdminSearch value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search business, email, WABA..." /></div>{empty}</div>;
+  if (isLoading || error || !data?.items?.length) return <div><PageHeader title="WhatsApp" description="Centralized WhatsApp integration view." /><div className="mb-4"><AdminSearch value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search business, email, WABA..." /></div>{empty}</div>;
   return (
     <div>
       <PageHeader title="WhatsApp" description="Connected accounts, phone numbers, connection and webhook status." />

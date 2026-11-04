@@ -16,7 +16,7 @@ export default function AdminTemplatesPage() {
   const { data, isLoading, error, refetch } = useQuery({ queryKey: ['admin-templates', search, status, page], queryFn: () => adminApi.templates({ search: search || undefined, status: status === 'ALL' ? undefined : status, page, limit: 20 }) });
   const remove = useMutation({ mutationFn: (id: string) => adminApi.deleteTemplate(id), onSuccess: () => { toast.success('Template removed'); qc.invalidateQueries({ queryKey: ['admin-templates'] }); }, onError: (e) => toast.error(e instanceof Error ? e.message : 'Delete failed') });
   const empty = <DataState isLoading={isLoading} error={error} items={data?.items} refetch={() => refetch()} emptyTitle="No templates" emptyHint="Message templates from all users appear here." />;
-  if (empty) return <div><PageHeader title="Templates" description="WhatsApp message templates across all users." /><Filters search={search} setSearch={(v) => { setSearch(v); setPage(1); }} status={status} setStatus={(v) => { setStatus(v); setPage(1); }} />{empty}</div>;
+  if (isLoading || error || !data?.items?.length) return <div><PageHeader title="Templates" description="WhatsApp message templates across all users." /><Filters search={search} setSearch={(v) => { setSearch(v); setPage(1); }} status={status} setStatus={(v) => { setStatus(v); setPage(1); }} />{empty}</div>;
   return (
     <div>
       <PageHeader title="Templates" description="View approval status and owning WABA; delete where supported." />

@@ -103,7 +103,7 @@ const serviceTypes = [
   },
 ];
 
-/* =========================================================
+/* =====================Delki====================================
  * TYPES
  * ======================================================= */
 
@@ -125,7 +125,8 @@ interface DeliveryRecord {
   receiverPhone: string;
   senderAddress: string;
   receiverAddress: string;
-  deliveryStatus: string;
+  // Prisma Delivery.deliveryStatus is nullable; older/AI-created rows may have no status yet.
+  deliveryStatus: string | null;
   checkoutUrl?: string | null;
   createdAt: string;
   courier_name?: string | null;
@@ -161,7 +162,9 @@ const isDeliveryRecord = (
     typeof record.receiverPhone === 'string' &&
     typeof record.senderAddress === 'string' &&
     typeof record.receiverAddress === 'string' &&
-    typeof record.deliveryStatus === 'string' &&
+    (record.deliveryStatus === null ||
+      record.deliveryStatus === undefined ||
+      typeof record.deliveryStatus === 'string') &&
     (record.checkoutUrl === undefined ||
       record.checkoutUrl === null ||
       typeof record.checkoutUrl === 'string') &&
@@ -798,7 +801,7 @@ export default function DeliveriesPage() {
           courier: delivery.courier_name || 'Not assigned',
           isPaymentPending: delivery.deliveryStatus === 'PAYMENT_PENDING',
           checkoutUrl: delivery.checkoutUrl ?? null,
-          status: delivery.deliveryStatus
+          status: (delivery.deliveryStatus ?? 'CREATED')
             .toLowerCase()
             .replace(/_/g, ' ')
             .replace(/\b\w/g, (character) => character.toUpperCase()),

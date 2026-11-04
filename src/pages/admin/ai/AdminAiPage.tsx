@@ -32,7 +32,7 @@ export default function AdminAiPage() {
       <div className="mb-4"><AdminSearch value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search customer phone or tenant email..." /></div>
       {(() => {
         const empty = <DataState isLoading={isLoading} error={error} items={data?.conversations.items} refetch={() => refetch()} emptyTitle="No AI conversations" emptyHint="WhatsApp conversations processed by AI appear here." />;
-        if (empty) return empty;
+        if (isLoading || error || !data?.conversations.items?.length) return empty;
         return (<>
           <div className="overflow-x-auto rounded-xl border bg-card">
             <table className="w-full min-w-[1000px] text-sm">

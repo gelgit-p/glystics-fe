@@ -19,7 +19,7 @@ export default function AdminAutomationsPage() {
   const toggle = useMutation({ mutationFn: (a: { id: string; enabled: boolean }) => adminApi.toggleAutomation(a.id, !a.enabled), onSuccess: () => { toast.success('Automation updated'); invalidate(); }, onError: (e) => toast.error(e instanceof Error ? e.message : 'Update failed') });
   const remove = useMutation({ mutationFn: (id: string) => adminApi.deleteAutomation(id), onSuccess: () => { toast.success('Automation removed'); invalidate(); }, onError: (e) => toast.error(e instanceof Error ? e.message : 'Delete failed') });
   const empty = <DataState isLoading={isLoading} error={error} items={data?.items} refetch={() => refetch()} emptyTitle="No automations" emptyHint="Automations from all users appear here." />;
-  if (empty) return <div><PageHeader title="Automations" description="Inspect, disable, or remove user automations." /><Filters search={search} setSearch={(v) => { setSearch(v); setPage(1); }} enabled={enabled} setEnabled={(v) => { setEnabled(v); setPage(1); }} />{empty}</div>;
+  if (isLoading || error || !data?.items?.length) return <div><PageHeader title="Automations" description="Inspect, disable, or remove user automations." /><Filters search={search} setSearch={(v) => { setSearch(v); setPage(1); }} enabled={enabled} setEnabled={(v) => { setEnabled(v); setPage(1); }} />{empty}</div>;
   return (
     <div>
       <PageHeader title="Automations" description="Triggers, actions, run history, and errors." />

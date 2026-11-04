@@ -26,6 +26,8 @@ export function AdminPager({ page, total, limit, onPage }: { page: number; total
   );
 }
 
+// Returns null when there are items to display — callers must branch on
+// isLoading/error/items, never on this element's truthiness (JSX is always truthy).
 export function DataState({ isLoading, error, items, refetch, emptyTitle, emptyHint }: {
   isLoading: boolean; error: unknown; items: unknown[] | undefined; refetch: () => void; emptyTitle: string; emptyHint: string;
 }) {

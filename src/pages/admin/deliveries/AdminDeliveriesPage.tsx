@@ -22,7 +22,7 @@ export default function AdminDeliveriesPage() {
   const remove = useMutation({ mutationFn: (id: string) => adminApi.deleteDelivery(id), onSuccess: () => { toast.success('Delivery removed'); invalidate(); }, onError: (e) => toast.error(e instanceof Error ? e.message : 'Delete failed (paid deliveries cannot be deleted)') });
 
   const empty = <DataState isLoading={isLoading} error={error} items={data?.items} refetch={() => refetch()} emptyTitle="No deliveries" emptyHint="Deliveries from all users appear here." />;
-  if (empty) return <div><PageHeader title="Deliveries" description="Every delivery across all users." /><div className="mb-4"><AdminSearch value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search tracking ID, names, phone..." /></div>{empty}</div>;
+  if (isLoading || error || !data?.items?.length) return <div><PageHeader title="Deliveries" description="Every delivery across all users." /><div className="mb-4"><AdminSearch value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search tracking ID, names, phone..." /></div>{empty}</div>;
 
   return (
     <div>
