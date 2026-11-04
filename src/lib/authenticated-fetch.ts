@@ -80,6 +80,7 @@ export async function authenticatedFetch(
   localStorage.removeItem('accessToken');
   localStorage.removeItem('refreshToken');
   localStorage.removeItem('userId');
+  localStorage.removeItem('userRole');
   if (window.location.pathname !== '/login') {
     window.location.assign('/login');
   }

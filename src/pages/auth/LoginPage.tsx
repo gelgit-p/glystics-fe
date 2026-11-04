@@ -50,10 +50,10 @@ export default function LoginPage() {
         throw new Error(message || 'Unable to sign in');
       }
 
-      const result = (await response.json()) as { 
-        accessToken?: string; 
-        refreshToken?: string; 
-        user?: { id: string; };
+      const result = (await response.json()) as {
+        accessToken?: string;
+        refreshToken?: string;
+        user?: { id: string; role?: 'USER' | 'SUPER_ADMIN' };
        };
 
       if (!result.accessToken || !result.refreshToken || !result.user?.id) {
@@ -63,9 +63,11 @@ export default function LoginPage() {
       localStorage.setItem('accessToken', result.accessToken);
       localStorage.setItem('refreshToken', result.refreshToken);
       localStorage.setItem('userId', result.user.id);
+      if (result.user.role) localStorage.setItem('userRole', result.user.role);
+      else localStorage.removeItem('userRole');
 
       toast.success('Welcome back!');
-      navigate('/dashboard');
+      navigate(result.user.role === 'SUPER_ADMIN' ? '/admin' : '/dashboard');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Unable to sign in');
     } finally {

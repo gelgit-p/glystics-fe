@@ -32,6 +32,7 @@ const AiDraftsPage = lazy(() => import('@/pages/ai/AiDraftsPage'));
 const AiDraftDetailsPage = lazy(() => import('@/pages/ai/AiDraftDetailsPage'));
 const AiApprovalsPage = lazy(() => import('@/pages/ai/AiApprovalsPage'));
 const AiAuditPage = lazy(() => import('@/pages/ai/AiAuditPage'));
+const AdminPage = lazy(() => import('@/pages/admin/AdminPage'));
 
 function PageLoader() {
   return <LoadingState text="Loading page..." />;
@@ -41,6 +42,11 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const accessToken = localStorage.getItem('accessToken');
 
   return accessToken ? children : <Navigate to="/login" replace />;
+}
+
+function SuperAdminRoute({ children }: { children: React.ReactNode }) {
+  // Server enforces SUPER_ADMIN (SuperAdminGuard re-reads DB role); this is UX gating only.
+  return localStorage.getItem('userRole') === 'SUPER_ADMIN' ? children : <Navigate to="/dashboard" replace />;
 }
 
 export default function App() {
@@ -84,6 +90,7 @@ export default function App() {
               <Route path="/ai/drafts/:id" element={<CreditAccessGate><AiDraftDetailsPage /></CreditAccessGate>} />
               <Route path="/ai/approvals" element={<CreditAccessGate><AiApprovalsPage /></CreditAccessGate>} />
               <Route path="/ai/audit" element={<CreditAccessGate><AiAuditPage /></CreditAccessGate>} />
+              <Route path="/admin" element={<SuperAdminRoute><AdminPage /></SuperAdminRoute>} />
               <Route path="/billing" element={<BillingPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/settings/profile" element={<ProfileSettingsPage />} />

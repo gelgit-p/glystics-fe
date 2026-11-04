@@ -19,6 +19,7 @@ import {
   History,
   Home,
   MoreHorizontal,
+  ShieldCheck,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { authenticatedFetch as fetch } from '@/lib/authenticated-fetch';
@@ -56,6 +57,8 @@ const CREDIT_LOCKED_ROUTES = [
   '/ai/approvals',
   '/ai/audit',
 ];
+
+const isSuperAdmin = () => localStorage.getItem('userRole') === 'SUPER_ADMIN';
 
 const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -171,6 +174,20 @@ export function Sidebar({ collapsed, setCollapsed }: { collapsed: boolean; setCo
       </nav>
 
       <div className="space-y-1 border-t border-sidebar-border p-3">
+        {isSuperAdmin() && (
+          <NavLink
+            to="/admin"
+            className={({ isActive }) =>
+              cn(
+                'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                isActive ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+              )
+            }
+          >
+            <ShieldCheck className="h-[18px] w-[18px] shrink-0" />
+            {!collapsed && <span>Super Admin</span>}
+          </NavLink>
+        )}
         <NavLink
           to="/settings"
           className={({ isActive }) =>

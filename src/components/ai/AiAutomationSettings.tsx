@@ -24,7 +24,7 @@ export function AiDeliveryDetectionCard() {
               When enabled, Dispatchly AI reads inbound WhatsApp messages, detects delivery requests, extracts details, asks follow-up questions, and prepares drafts for your approval. When disabled, messages are still stored in the AI Inbox but are never processed, quoted, or replied to by AI.
             </p>
             {s && !s.globalEnabled && <p className="mt-2 text-sm font-medium text-amber-600">Currently disabled globally by a super admin (AI_DELIVERY_DETECTION_DISABLED). Your switch will take effect when the global switch is re-enabled.</p>}
-            {s && <p className="mt-2 text-xs text-muted-foreground">Status: {s.effectiveEnabled ? 'Active' : 'Inactive'} · AI mode: {s.aiMode}{s.aiMode === 'demo' ? ' (simulated extraction)' : ''} · Role: {s.role}</p>}
+            {s && <p className="mt-2 text-xs text-muted-foreground">Status: {s.effectiveEnabled ? 'Active' : 'Inactive'} · AI mode: {s.aiMode}{s.aiMode === 'demo' ? ' (simulated extraction)' : ''}{s.aiProvider ? ` · Provider: ${s.aiProvider}` : ''}{s.aiModel ? ` / ${s.aiModel}` : ''} · Role: {s.role}</p>}
           </div>
         </div>
         <Switch
@@ -55,7 +55,7 @@ export function SuperAdminAiPanel() {
         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary"><ShieldCheck className="h-5 w-5" /></div>
         <div>
           <h3 className="font-semibold">Super Admin — Dispatchly AI</h3>
-          <p className="text-sm text-muted-foreground">Global AI controls. Global kill-switch is server env <code>AI_DELIVERY_DETECTION_DISABLED</code> (currently {overview.data?.globalEnabled === false ? 'ON — all detection disabled' : 'off'}).</p>
+          <p className="text-sm text-muted-foreground">Global AI controls{overview.data?.aiProvider ? ` · ${overview.data.aiProvider}/${overview.data.aiModel} (${overview.data.aiMode})` : ''}. Global kill-switch is server env <code>AI_DELIVERY_DETECTION_DISABLED</code> (currently {overview.data?.globalEnabled === false ? 'ON — all detection disabled' : 'off'}).</p>
         </div>
       </div>
       {overview.data && (

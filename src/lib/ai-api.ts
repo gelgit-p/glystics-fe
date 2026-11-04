@@ -9,7 +9,7 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
   return data as T;
 }
 
-export interface AiOverview { aiMode: 'live' | 'demo'; demoLabel?: string; conversations: number; pendingApprovals: number; auditEvents: number; draftsByStatus: Record<string, number>; totalDrafts: number; }
+export interface AiOverview { aiMode: 'live' | 'demo'; aiProvider?: string; aiModel?: string; demoLabel?: string; conversations: number; pendingApprovals: number; auditEvents: number; draftsByStatus: Record<string, number>; totalDrafts: number; }
 export interface AiQuote { id: string; courierName: string; courierId: string; serviceCode: string; amount: number; currency: string; deliveryEta?: string | null; score: number; scoreReasons: string[]; }
 export interface AiDraft {
   id: string; status: string; missingFields: string[]; confidence?: number | null; deliveryId?: string | null;
@@ -32,14 +32,16 @@ export interface PaymentCheckResult {
   shipbubbleOrderId?: string | null; trackingUrl?: string | null; bookingError?: string | null;
   providerStatus?: string; checked: boolean; labelCreated: boolean; draftStatus: string; message: string;
 }
-export interface AiSettings { aiDeliveryDetectionEnabled: boolean; globalEnabled: boolean; effectiveEnabled: boolean; role: 'USER' | 'SUPER_ADMIN'; aiMode: 'live' | 'demo'; }
+export interface AiSettings { aiDeliveryDetectionEnabled: boolean; globalEnabled: boolean; effectiveEnabled: boolean; role: 'USER' | 'SUPER_ADMIN'; aiMode: 'live' | 'demo'; aiProvider?: string; aiModel?: string; }
 export interface AdminUser { id: string; email: string; businessName: string; role: 'USER' | 'SUPER_ADMIN'; aiDeliveryDetectionEnabled: boolean; createdAt: string; _count: { aiConversations: number; deliveryDrafts: number }; }
-export interface AdminOverview { globalEnabled: boolean; aiMode: string; users: number; superAdmins: number; tenantsWithDetectionEnabled: number; conversations: number; drafts: number; approvals: number; }
+export interface AdminOverview { globalEnabled: boolean; aiMode: string; aiProvider?: string; aiModel?: string; users: number; superAdmins: number; tenantsWithDetectionEnabled: number; conversations: number; drafts: number; approvals: number; }
+export interface AiHealth { ok: boolean; mode: 'live' | 'demo'; provider: string; model: string; latencyMs?: number; error?: string; }
 
 export const aiApi = {
   settings: () => req<AiSettings>('/ai/settings'),
   updateSettings: (aiDeliveryDetectionEnabled: boolean) => req<AiSettings>('/ai/settings', { method: 'PATCH', body: JSON.stringify({ aiDeliveryDetectionEnabled }) }),
   adminOverview: () => req<AdminOverview>('/ai/admin/overview'),
+  adminAiHealth: () => req<AiHealth>('/ai/admin/ai-health'),
   adminUsers: () => req<AdminUser[]>('/ai/admin/users'),
   adminSetRole: (id: string, role: 'USER' | 'SUPER_ADMIN') => req(`/ai/admin/users/${id}/role`, { method: 'PATCH', body: JSON.stringify({ role }) }),
   adminSetDetection: (id: string, aiDeliveryDetectionEnabled: boolean) => req(`/ai/admin/users/${id}/ai-detection`, { method: 'PATCH', body: JSON.stringify({ aiDeliveryDetectionEnabled }) }),
