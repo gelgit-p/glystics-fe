@@ -32,7 +32,19 @@ const AiDraftsPage = lazy(() => import('@/pages/ai/AiDraftsPage'));
 const AiDraftDetailsPage = lazy(() => import('@/pages/ai/AiDraftDetailsPage'));
 const AiApprovalsPage = lazy(() => import('@/pages/ai/AiApprovalsPage'));
 const AiAuditPage = lazy(() => import('@/pages/ai/AiAuditPage'));
-const AdminPage = lazy(() => import('@/pages/admin/AdminPage'));
+const AdminLayout = lazy(() => import('@/components/layout/AdminLayout').then((m) => ({ default: m.AdminLayout })));
+const AdminUsersPage = lazy(() => import('@/pages/admin/users/AdminUsersPage'));
+const AdminUserDetailPage = lazy(() => import('@/pages/admin/users/AdminUserDetailPage'));
+const AdminDeliveriesPage = lazy(() => import('@/pages/admin/deliveries/AdminDeliveriesPage'));
+const AdminDeliveryDetailPage = lazy(() => import('@/pages/admin/deliveries/AdminDeliveryDetailPage'));
+const AdminBillingPage = lazy(() => import('@/pages/admin/billing/AdminBillingPage'));
+const AdminNotificationsPage = lazy(() => import('@/pages/admin/notifications/AdminNotificationsPage'));
+const AdminTemplatesPage = lazy(() => import('@/pages/admin/templates/AdminTemplatesPage'));
+const AdminAutomationsPage = lazy(() => import('@/pages/admin/automations/AdminAutomationsPage'));
+const AdminWhatsappPage = lazy(() => import('@/pages/admin/whatsapp/AdminWhatsappPage'));
+const AdminAiPage = lazy(() => import('@/pages/admin/ai/AdminAiPage'));
+const AdminAiConversationPage = lazy(() => import('@/pages/admin/ai/AdminAiConversationPage'));
+const AdminOverviewPage = lazy(() => import('@/pages/admin/overview/AdminOverviewPage'));
 
 function PageLoader() {
   return <LoadingState text="Loading page..." />;
@@ -90,7 +102,20 @@ export default function App() {
               <Route path="/ai/drafts/:id" element={<CreditAccessGate><AiDraftDetailsPage /></CreditAccessGate>} />
               <Route path="/ai/approvals" element={<CreditAccessGate><AiApprovalsPage /></CreditAccessGate>} />
               <Route path="/ai/audit" element={<CreditAccessGate><AiAuditPage /></CreditAccessGate>} />
-              <Route path="/admin" element={<SuperAdminRoute><AdminPage /></SuperAdminRoute>} />
+              <Route element={<SuperAdminRoute><AdminLayout /></SuperAdminRoute>}>
+                <Route path="/admin" element={<AdminOverviewPage />} />
+                <Route path="/admin/users" element={<AdminUsersPage />} />
+                <Route path="/admin/users/:id" element={<AdminUserDetailPage />} />
+                <Route path="/admin/deliveries" element={<AdminDeliveriesPage />} />
+                <Route path="/admin/deliveries/:id" element={<AdminDeliveryDetailPage />} />
+                <Route path="/admin/billing" element={<AdminBillingPage />} />
+                <Route path="/admin/notifications" element={<AdminNotificationsPage />} />
+                <Route path="/admin/templates" element={<AdminTemplatesPage />} />
+                <Route path="/admin/automations" element={<AdminAutomationsPage />} />
+                <Route path="/admin/whatsapp" element={<AdminWhatsappPage />} />
+                <Route path="/admin/ai" element={<AdminAiPage />} />
+                <Route path="/admin/ai/conversations/:id" element={<AdminAiConversationPage />} />
+              </Route>
               <Route path="/billing" element={<BillingPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/settings/profile" element={<ProfileSettingsPage />} />
