@@ -88,6 +88,23 @@ export default function App() {
               }
             />
 
+            {/* Admin has its own layout (sidebar + topbar); it must not nest
+                inside DashboardLayout or both shells render duplicate chrome. */}
+            <Route element={<ProtectedRoute><SuperAdminRoute><AdminLayout /></SuperAdminRoute></ProtectedRoute>}>
+              <Route path="/admin" element={<AdminOverviewPage />} />
+              <Route path="/admin/users" element={<AdminUsersPage />} />
+              <Route path="/admin/users/:id" element={<AdminUserDetailPage />} />
+              <Route path="/admin/deliveries" element={<AdminDeliveriesPage />} />
+              <Route path="/admin/deliveries/:id" element={<AdminDeliveryDetailPage />} />
+              <Route path="/admin/billing" element={<AdminBillingPage />} />
+              <Route path="/admin/notifications" element={<AdminNotificationsPage />} />
+              <Route path="/admin/templates" element={<AdminTemplatesPage />} />
+              <Route path="/admin/automations" element={<AdminAutomationsPage />} />
+              <Route path="/admin/whatsapp" element={<AdminWhatsappPage />} />
+              <Route path="/admin/ai" element={<AdminAiPage />} />
+              <Route path="/admin/ai/conversations/:id" element={<AdminAiConversationPage />} />
+            </Route>
+
             <Route element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/deliveries" element={<CreditAccessGate><DeliveriesPage /></CreditAccessGate>} />
@@ -102,20 +119,6 @@ export default function App() {
               <Route path="/ai/drafts/:id" element={<CreditAccessGate><AiDraftDetailsPage /></CreditAccessGate>} />
               <Route path="/ai/approvals" element={<CreditAccessGate><AiApprovalsPage /></CreditAccessGate>} />
               <Route path="/ai/audit" element={<CreditAccessGate><AiAuditPage /></CreditAccessGate>} />
-              <Route element={<SuperAdminRoute><AdminLayout /></SuperAdminRoute>}>
-                <Route path="/admin" element={<AdminOverviewPage />} />
-                <Route path="/admin/users" element={<AdminUsersPage />} />
-                <Route path="/admin/users/:id" element={<AdminUserDetailPage />} />
-                <Route path="/admin/deliveries" element={<AdminDeliveriesPage />} />
-                <Route path="/admin/deliveries/:id" element={<AdminDeliveryDetailPage />} />
-                <Route path="/admin/billing" element={<AdminBillingPage />} />
-                <Route path="/admin/notifications" element={<AdminNotificationsPage />} />
-                <Route path="/admin/templates" element={<AdminTemplatesPage />} />
-                <Route path="/admin/automations" element={<AdminAutomationsPage />} />
-                <Route path="/admin/whatsapp" element={<AdminWhatsappPage />} />
-                <Route path="/admin/ai" element={<AdminAiPage />} />
-                <Route path="/admin/ai/conversations/:id" element={<AdminAiConversationPage />} />
-              </Route>
               <Route path="/billing" element={<BillingPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/settings/profile" element={<ProfileSettingsPage />} />

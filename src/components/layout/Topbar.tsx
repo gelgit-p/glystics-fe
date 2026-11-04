@@ -31,6 +31,15 @@ interface UserDetails {
 }
 
 const pageTitles: Record<string, string> = {
+  '/admin': 'Platform overview',
+  '/admin/users': 'Users',
+  '/admin/deliveries': 'Deliveries',
+  '/admin/billing': 'Billing & Credits',
+  '/admin/notifications': 'Notifications',
+  '/admin/templates': 'Templates',
+  '/admin/automations': 'Automations',
+  '/admin/whatsapp': 'WhatsApp',
+  '/admin/ai': 'AI Agents',
   '/dashboard': 'Dashboard',
   '/deliveries': 'Deliveries',
   '/notifications': 'Notifications',
