@@ -14,7 +14,14 @@ export interface Paged<T> { items: T[]; total: number; page: number; limit: numb
 export interface PlatformOverview {
   users: { total: number; superAdmins: number; suspended: number; detectionEnabled: number };
   deliveries: { total: number; byStatus: Record<string, number> };
-  credits: { deliveryBalance: number; points: number; transactions: number; purchases: number | { status: string; count: number; amountKobo: number }[] | any };
+  credits: {
+    deliveryBalance: number;
+    points: number;
+    transactions: number;
+    purchasesByStatus: { status: string; count: number; amountKobo: number }[];
+    /** @deprecated older API responses used this field instead of purchasesByStatus */
+    purchases?: number | { status: string; count?: number; amountKobo?: number }[];
+  };
   ai: { mode: string; provider: string; model: string; globalEnabled: boolean; conversations: number; drafts: number; approvals: number; failedMessages: number; detectionEnabledTenants: number };
   notifications: { total: number; failed: number };
   templates: { total: number; pendingReview: number };

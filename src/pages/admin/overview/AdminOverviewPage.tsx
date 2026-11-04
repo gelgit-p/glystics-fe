@@ -11,10 +11,18 @@ export default function AdminOverviewPage() {
   if (isLoading) return <LoadingState text="Loading platform overview..." />;
   if (error || !data) return <ErrorState onRetry={() => refetch()} />;
 
+  const byStatus = data.deliveries.byStatus ?? {};
+  // API returns purchasesByStatus; tolerate the old `purchases` shape so a
+  // stale/mismatched response can never crash the page again.
+  const purchasesCount =
+    typeof data.credits.purchases === 'number'
+      ? data.credits.purchases
+      : (data.credits.purchasesByStatus ?? data.credits.purchases ?? []).reduce((s, p) => s + (p.count ?? 0), 0);
+
   const cards = [
     { label: 'Users', value: data.users.total, hint: `${data.users.superAdmins} super admins · ${data.users.suspended} unconfirmed · ${data.users.detectionEnabled} AI on`, icon: Users },
-    { label: 'Deliveries', value: data.deliveries.total, hint: Object.entries(data.deliveries.byStatus).slice(0, 4).map(([k, v]) => `${k}: ${v}`).join(' · ') || 'No deliveries yet', icon: Package },
-    { label: 'Credit balance (all wallets)', value: data.credits.deliveryBalance, hint: `${data.credits.transactions} transactions · ${typeof data.credits.purchases === 'number' ? `${data.credits.purchases} purchases` : `${(data.credits.purchases as any[]).reduce((s, p) => s + p.count, 0)} purchases`}`, icon: CreditCard },
+    { label: 'Deliveries', value: data.deliveries.total, hint: Object.entries(byStatus).slice(0, 4).map(([k, v]) => `${k}: ${v}`).join(' · ') || 'No deliveries yet', icon: Package },
+    { label: 'Credit balance (all wallets)', value: data.credits.deliveryBalance, hint: `${data.credits.transactions} transactions · ${purchasesCount} purchases`, icon: CreditCard },
     { label: 'AI conversations', value: data.ai.conversations, hint: `${data.ai.drafts} drafts · ${data.ai.approvals} approvals · ${data.ai.failedMessages} failed · ${data.ai.mode} ${data.ai.provider}/${data.ai.model}`, icon: Bot },
     { label: 'Notifications', value: data.notifications.total, hint: `${data.notifications.failed} failed`, icon: Bell },
     { label: 'Templates', value: data.templates.total, hint: `${data.templates.pendingReview} pending review`, icon: FileText },
@@ -41,9 +49,9 @@ export default function AdminOverviewPage() {
       </div>
       <div className="mt-6 rounded-xl border bg-card p-4">
         <h2 className="font-semibold">Deliveries by status</h2>
-        {Object.keys(data.deliveries.byStatus).length === 0 && <p className="mt-2 text-sm text-muted-foreground">No deliveries yet.</p>}
+        {Object.keys(byStatus).length === 0 && <p className="mt-2 text-sm text-muted-foreground">No deliveries yet.</p>}
         <div className="mt-3 space-y-2">
-          {Object.entries(data.deliveries.byStatus).map(([status, count]) => {
+          {Object.entries(byStatus).map(([status, count]) => {
             const total = Math.max(data.deliveries.total, 1);
             return (
               <div key={status} className="flex items-center gap-3 text-sm">
