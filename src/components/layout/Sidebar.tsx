@@ -24,6 +24,14 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { authenticatedFetch as fetch } from '@/lib/authenticated-fetch';
+import { sharedNetworkApi, sharedNetworkAccessState } from '@/lib/shared-network-api';
+
+function useSharedNetworkDisabled() {
+  const enabled = Boolean(localStorage.getItem('accessToken'));
+  const status = useQuery({ queryKey: ['sn-status'], queryFn: sharedNetworkApi.status, enabled, staleTime: 15_000 });
+  const business = useQuery({ queryKey: ['sn-business'], queryFn: sharedNetworkApi.business, enabled, staleTime: 15_000 });
+  return sharedNetworkAccessState(status.data, business.data);
+}
 
 function useCreditAccess() {
   const userId = localStorage.getItem('userId') ?? '';
@@ -117,6 +125,7 @@ export function Sidebar({ collapsed, setCollapsed }: { collapsed: boolean; setCo
   const location = useLocation();
   const navigate = useNavigate();
   const hasPurchasedCredits = useCreditAccess();
+  const snAccess = useSharedNetworkDisabled();
 
   return (
     <aside
@@ -143,6 +152,16 @@ export function Sidebar({ collapsed, setCollapsed }: { collapsed: boolean; setCo
         {navItems.map((item) => {
           const active = location.pathname.startsWith(item.to);
           const creditLocked = CREDIT_LOCKED_ROUTES.includes(item.to) && !hasPurchasedCredits;
+          const snLocked = item.to === '/shared-network' && snAccess.disabled;
+          if (snLocked) {
+            return (
+              <button key={item.to} type="button" disabled title={snAccess.message} aria-disabled="true"
+                className="flex w-full cursor-not-allowed items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-muted-foreground opacity-50">
+                <item.icon className="h-[18px] w-[18px] shrink-0" />
+                {!collapsed && <><span>{item.label}</span><LockKeyhole className="ml-auto h-3.5 w-3.5" /></>}
+              </button>
+            );
+          }
           if (creditLocked) {
             return (
               <button
@@ -220,6 +239,7 @@ export function MobileSidebar({ open, onClose }: { open: boolean; onClose: () =>
   const location = useLocation();
   const navigate = useNavigate();
   const hasPurchasedCredits = useCreditAccess();
+  const snAccess = useSharedNetworkDisabled();
 
   return (
     <>
@@ -240,6 +260,14 @@ export function MobileSidebar({ open, onClose }: { open: boolean; onClose: () =>
           {navItems.map((item) => {
             const active = location.pathname.startsWith(item.to);
               const creditLocked = CREDIT_LOCKED_ROUTES.includes(item.to) && !hasPurchasedCredits;
+              const snLocked = item.to === '/shared-network' && snAccess.disabled;
+              if (snLocked) {
+                return (
+                  <button key={item.to} type="button" disabled title={snAccess.message} aria-disabled="true" className="flex w-full cursor-not-allowed items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-muted-foreground opacity-50">
+                    <item.icon className="h-[18px] w-[18px] shrink-0" /><span>{item.label}</span><LockKeyhole className="ml-auto h-3.5 w-3.5" />
+                  </button>
+                );
+              }
             if (creditLocked) {
               return (
                 <button

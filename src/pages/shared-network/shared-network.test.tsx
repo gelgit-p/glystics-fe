@@ -14,3 +14,19 @@ describe('paidPlans', () => {
     expect(paidPlans([])).toEqual([]);
   });
 });
+
+import { sharedNetworkAccessState } from '@/lib/shared-network-api';
+describe('sharedNetworkAccessState', () => {
+  it('disables when global network is OFF', () => {
+    expect(sharedNetworkAccessState({ networkEnabled: false, disabledMessage: 'Maintenance' }, null).disabled).toBe(true);
+    expect(sharedNetworkAccessState({ networkEnabled: false }, null).message).toMatch(/currently unavailable/);
+  });
+  it('disables when this business is deactivated even if global is ON', () => {
+    const r = sharedNetworkAccessState({ networkEnabled: true }, { accessEnabled: false } as never);
+    expect(r.disabled).toBe(true); expect(r.message).toMatch(/deactivated by an administrator/);
+  });
+  it('enabled otherwise', () => {
+    expect(sharedNetworkAccessState({ networkEnabled: true }, { accessEnabled: true } as never).disabled).toBe(false);
+    expect(sharedNetworkAccessState(null, null).disabled).toBe(false);
+  });
+});

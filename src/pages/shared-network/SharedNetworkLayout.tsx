@@ -1,7 +1,7 @@
 import { NavLink, Outlet, Navigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { LayoutDashboard, CalendarClock, Layers, Users, Package, Coins, CreditCard, Bot, BarChart3, Settings, Network } from 'lucide-react';
-import { sharedNetworkApi } from '@/lib/shared-network-api';
+import { sharedNetworkApi, sharedNetworkAccessState } from '@/lib/shared-network-api';
 import { LoadingState } from '@/components/shared';
 import { cn } from '@/lib/utils';
 
@@ -22,14 +22,15 @@ export default function SharedNetworkLayout() {
   const q = useQuery({ queryKey: ['sn-business'], queryFn: sharedNetworkApi.business });
   const status = useQuery({ queryKey: ['sn-status'], queryFn: sharedNetworkApi.status });
   if (q.isLoading) return <LoadingState text="Loading Shared Delivery Network..." />;
-  if (status.data && !status.data.networkEnabled) return <div className="mx-auto max-w-xl py-16 text-center space-y-3"><h1 className="text-2xl font-bold">Shared Delivery Network unavailable</h1><p className="text-muted-foreground">{status.data.disabledMessage || 'The Shared Delivery Network is currently unavailable. Please try again later.'}</p></div>;
+  const access = sharedNetworkAccessState(status.data, q.data);
+  if (access.disabled) return <div className="mx-auto max-w-xl py-16 text-center space-y-3"><h1 className="text-2xl font-bold">Shared Delivery Network unavailable</h1><p className="text-muted-foreground">{access.message}</p></div>;
   if (!q.data) return <Navigate to="/shared-network/join" replace />;
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground"><Network className="h-5 w-5" /></div>
-          <div><h1 className="text-xl font-bold">Shared Delivery Network</h1><p className="text-sm text-muted-foreground">{q.data.businessName} · {q.data.wallet?.balance ?? 0} credits · {q.data.status}</p></div>
+          <div><h1 className="text-xl font-bold">Shared Delivery Network</h1><p className="text-sm text-muted-foreground">{q.data.businessName} · {q.data.wallet?.balance ?? 0} credits · {q.data.accessEnabled === false ? 'Deactivated' : q.data.status}</p></div>
         </div>
       </div>
       <nav className="flex gap-1 overflow-x-auto border-b border-border pb-px" aria-label="Shared Network">

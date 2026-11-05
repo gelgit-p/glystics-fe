@@ -13,7 +13,7 @@ const patch = <T,>(path: string, data?: unknown) => req<T>(path, { method: 'PATC
 const del = <T,>(path: string) => req<T>(path, { method: 'DELETE' });
 
 export interface NetworkPlan { id: string; name: string; slug: string; description?: string | null; monthlyPriceKobo: number; annualPriceKobo: number; monthlyDeliveryVolume: number; reservedCapacityAllowance: number; maxActiveSlots: number; poolingEligible: boolean; discountPercent: number; analyticsAccess: boolean; aiDispatchAccess: boolean; priorityAllocation: boolean; maxLocations: number }
-export interface NetworkBusiness { id: string; businessName: string; businessEmail: string; contactPhone: string; category: string; pickupLocations: string[]; operatingRegions: string[]; expectedDailyVolume: number; expectedWeeklyVolume: number; preferredWindows: string[]; status: string; aiAutoDispatchEnabled: boolean; aiAutoReserveEnabled: boolean; aiSpendLimitCredits?: number | null; wallet?: { balance: number; lifetimePurchased: number; lifetimeSpent: number } | null; subscriptions?: AnyRecord[] }
+export interface NetworkBusiness { id: string; businessName: string; businessEmail: string; contactPhone: string; category: string; pickupLocations: string[]; operatingRegions: string[]; expectedDailyVolume: number; expectedWeeklyVolume: number; preferredWindows: string[]; status: string; accessEnabled: boolean; aiAutoDispatchEnabled: boolean; aiAutoReserveEnabled: boolean; aiSpendLimitCredits?: number | null; wallet?: { balance: number; lifetimePurchased: number; lifetimeSpent: number } | null; subscriptions?: AnyRecord[] }
 export interface Capacity { id: string; date: string; region: string; window: string; vehicleType: string; totalCapacity: number; reservedCapacity: number; available: number; pricePerSlotCredits: number; pricePerSlotKobo: number; cutoffAt?: string | null }
 export interface Reservation { id: string; quantity: number; pickupLocation: string; deliveryType: string; status: string; costCredits: number; costKobo: number; createdAt: string; capacity: Capacity }
 export interface Slot { id: string; title: string; date: string; window: string; startTime?: string | null; endTime?: string | null; quantity: number; pickupLocation: string; isRecurring: boolean; recurrence?: string | null; status: string; reservationId?: string | null }
@@ -62,6 +62,7 @@ export const sharedNetworkAdminApi = {
   overview: () => req<AnyRecord>('/admin/shared-network/overview'),
   businesses: () => req<AnyRecord[]>('/admin/shared-network/businesses'),
   setBusinessStatus: (id: string, status: string) => patch<AnyRecord>(`/admin/shared-network/businesses/${id}/status`, { status }),
+  setBusinessAccess: (id: string, enabled: boolean) => patch<AnyRecord>(`/admin/shared-network/businesses/${id}/access`, { enabled }),
   plans: () => req<NetworkPlan[]>('/admin/shared-network/plans'),
   upsertPlan: (d: unknown, id?: string) => id ? patch<AnyRecord>(`/admin/shared-network/plans/${id}`, d) : post<AnyRecord>('/admin/shared-network/plans', d),
   adjustCredits: (d: unknown) => post<AnyRecord>('/admin/shared-network/credits/adjust', d),
@@ -76,3 +77,9 @@ export const sharedNetworkAdminApi = {
 export const naira = (kobo?: number | null) => `₦${((kobo ?? 0) / 100).toLocaleString('en-NG', { maximumFractionDigits: 0 })}`;
 export const fmtDate = (d?: string) => d ? new Date(d).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
 
+
+export function sharedNetworkAccessState(status?: NetworkSetting | null, business?: NetworkBusiness | null) {
+  if (status && !status.networkEnabled) return { disabled: true, message: status.disabledMessage || 'The Shared Delivery Network is currently unavailable. Please try again later.' } as const;
+  if (business && business.accessEnabled === false) return { disabled: true, message: 'Your Shared Delivery Network access has been deactivated by an administrator. Please contact Dispatchly support.' } as const;
+  return { disabled: false, message: '' } as const;
+}
