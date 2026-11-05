@@ -20,7 +20,9 @@ const nav = [
 
 export default function SharedNetworkLayout() {
   const q = useQuery({ queryKey: ['sn-business'], queryFn: sharedNetworkApi.business });
+  const status = useQuery({ queryKey: ['sn-status'], queryFn: sharedNetworkApi.status });
   if (q.isLoading) return <LoadingState text="Loading Shared Delivery Network..." />;
+  if (status.data && !status.data.networkEnabled) return <div className="mx-auto max-w-xl py-16 text-center space-y-3"><h1 className="text-2xl font-bold">Shared Delivery Network unavailable</h1><p className="text-muted-foreground">{status.data.disabledMessage || 'The Shared Delivery Network is currently unavailable. Please try again later.'}</p></div>;
   if (!q.data) return <Navigate to="/shared-network/join" replace />;
   return (
     <div className="space-y-6">

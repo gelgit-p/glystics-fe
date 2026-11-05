@@ -20,7 +20,12 @@ export interface Slot { id: string; title: string; date: string; window: string;
 export interface PoolDelivery { id: string; quantity: number; pickupAddress: string; destinationRegion: string; estimatedCostKobo: number; estimatedSavingsKobo: number; deliveryId?: string | null; status: string }
 export interface Pool { id: string; name: string; region: string; date: string; window: string; status: string; courierName?: string | null; vehicleType: string; maxDeliveries: number; totalDeliveries: number; estimatedSavingsKobo: number; businessCount: number; remaining: number; myDeliveries: PoolDelivery[]; score?: number; reason?: string }
 
+export const PAID_PLAN_SLUGS_EXCLUDED: string[] = [];
+export const isPaidPlan = (p: NetworkPlan) => p.slug !== 'network-starter' && p.monthlyPriceKobo > 0 && p.annualPriceKobo > 0;
+export const paidPlans = (plans: NetworkPlan[] = []) => plans.filter(isPaidPlan);
+export interface NetworkSetting { networkEnabled: boolean; disabledMessage?: string | null; updatedByUserId?: string | null; updatedAt?: string }
 export const sharedNetworkApi = {
+  status: () => req<NetworkSetting>('/shared-network/status'),
   plans: () => req<NetworkPlan[]>('/shared-network/plans'),
   business: () => req<NetworkBusiness | null>('/shared-network/business'),
   createBusiness: (d: unknown) => post<AnyRecord>('/shared-network/business', d),
@@ -65,6 +70,8 @@ export const sharedNetworkAdminApi = {
   transactions: () => req<AnyRecord[]>('/admin/shared-network/transactions'),
   audit: () => req<AnyRecord[]>('/admin/shared-network/audit'),
   refundReservation: (id: string) => post<AnyRecord>(`/admin/shared-network/reservations/${id}/refund`),
+  settings: () => req<NetworkSetting>('/admin/shared-network/settings'),
+  setNetworkEnabled: (enabled: boolean, disabledMessage?: string) => patch<NetworkSetting>('/admin/shared-network/settings/network-enabled', { enabled, disabledMessage }),
 };
 export const naira = (kobo?: number | null) => `₦${((kobo ?? 0) / 100).toLocaleString('en-NG', { maximumFractionDigits: 0 })}`;
 export const fmtDate = (d?: string) => d ? new Date(d).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
