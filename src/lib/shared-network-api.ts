@@ -56,6 +56,21 @@ export const sharedNetworkApi = {
   analytics: () => req<AnyRecord>('/shared-network/analytics/overview'),
   recommend: (d: unknown) => post<AnyRecord>('/shared-network/ai/recommend', d),
 };
+export async function publicPlans(): Promise<NetworkPlan[]> {
+  try {
+    const res = await window.fetch(`${base()}/public/shared-network/plans`);
+    if (!res.ok) return [];
+    const body = await res.json().catch(() => null) as AnyRecord;
+    return Array.isArray(body) ? (body as NetworkPlan[]) : [];
+  } catch { return []; }
+}
+export async function publicNetworkStatus(): Promise<NetworkSetting | null> {
+  try {
+    const res = await window.fetch(`${base()}/public/shared-network/status`);
+    if (!res.ok) return null;
+    return await res.json() as NetworkSetting;
+  } catch { return null; }
+}
 export const sharedNetworkAdminApi = {
   overview: () => req<AnyRecord>('/admin/shared-network/overview'),
   businesses: () => req<AnyRecord[]>('/admin/shared-network/businesses'),
