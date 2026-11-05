@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { Toaster } from 'sonner';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { QueryProvider } from '@/providers/QueryProvider';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { CreditAccessGate } from '@/components/layout/CreditAccessGate';
@@ -78,6 +79,7 @@ function SuperAdminRoute({ children }: { children: React.ReactNode }) {
 export default function App() {
   return (
     <QueryProvider>
+      <TooltipProvider delayDuration={250}>
       <BrowserRouter>
         <Suspense fallback={<PageLoader />}>
           <Routes>
@@ -159,6 +161,7 @@ export default function App() {
           </Routes>
         </Suspense>
       </BrowserRouter>
+      </TooltipProvider>
       <Toaster richColors position="top-right" />
     </QueryProvider>
   );

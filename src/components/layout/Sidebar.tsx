@@ -25,6 +25,7 @@ import {
 import { cn } from '@/lib/utils';
 import { authenticatedFetch as fetch } from '@/lib/authenticated-fetch';
 import { sharedNetworkApi, sharedNetworkAccessState } from '@/lib/shared-network-api';
+import { Hint } from '@/components/ui/hint';
 
 function useSharedNetworkDisabled() {
   const enabled = Boolean(localStorage.getItem('accessToken'));
@@ -160,11 +161,13 @@ export function Sidebar({ collapsed, setCollapsed }: { collapsed: boolean; setCo
           const snLocked = item.to === '/shared-network' && snAccess.disabled;
           if (snLocked) {
             return (
-              <button key={item.to} type="button" disabled title={snAccess.message} aria-disabled="true"
-                className="flex w-full cursor-not-allowed items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-muted-foreground opacity-50">
-                <item.icon className="h-[18px] w-[18px] shrink-0" />
-                {!collapsed && <><span>{item.label}</span><span className="ml-auto flex items-center gap-1 text-[10px] font-semibold uppercase"><LockKeyhole className="h-3.5 w-3.5" />Off</span></>}
-              </button>
+              <Hint key={item.to} label={snAccess.message} className="w-full">
+                <button type="button" disabled aria-disabled="true"
+                  className="flex w-full cursor-not-allowed items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-muted-foreground opacity-50">
+                  <item.icon className="h-[18px] w-[18px] shrink-0" />
+                  {!collapsed && <><span>{item.label}</span><span className="ml-auto flex items-center gap-1 text-[10px] font-semibold uppercase"><LockKeyhole className="h-3.5 w-3.5" />Off</span></>}
+                </button>
+              </Hint>
             );
           }
           if (creditLocked) {
@@ -172,8 +175,7 @@ export function Sidebar({ collapsed, setCollapsed }: { collapsed: boolean; setCo
               <button
                 key={item.to}
                 type="button"
-                title="Purchase credits to unlock this page"
-                onClick={() => navigate('/billing?purchaseRequired=true')}
+                title="Purchase credits to unlock this page" onClick={() => navigate('/billing?purchaseRequired=true')}
                 className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-muted-foreground opacity-50 transition-colors hover:bg-muted"
               >
                 <item.icon className="h-[18px] w-[18px] shrink-0" />
@@ -193,7 +195,7 @@ export function Sidebar({ collapsed, setCollapsed }: { collapsed: boolean; setCo
               )}
             >
               <item.icon className="h-[18px] w-[18px] shrink-0" />
-              {!collapsed && <span>{item.label}</span>}
+              {!collapsed ? <span>{item.label}</span> : <span className="sr-only">{item.label}</span>}
             </NavLink>
           );
         })}
@@ -229,12 +231,14 @@ export function Sidebar({ collapsed, setCollapsed }: { collapsed: boolean; setCo
       </div>
 
       <div className="border-t border-sidebar-border p-3">
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="flex w-full items-center justify-center rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
-        >
-          <ChevronLeft className={cn('h-4 w-4 transition-transform', collapsed && 'rotate-180')} />
-        </button>
+        <Hint label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
+          <button type="button" aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            onClick={() => setCollapsed(!collapsed)}
+            className="flex w-full items-center justify-center rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
+            <ChevronLeft className={cn('h-4 w-4 transition-transform', collapsed && 'rotate-180')} />
+          </button>
+        </Hint>
       </div>
     </aside>
   );
@@ -268,9 +272,11 @@ export function MobileSidebar({ open, onClose }: { open: boolean; onClose: () =>
               const snLocked = item.to === '/shared-network' && snAccess.disabled;
               if (snLocked) {
                 return (
-                  <button key={item.to} type="button" disabled title={snAccess.message} aria-disabled="true" className="flex w-full cursor-not-allowed items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-muted-foreground opacity-50">
-                    <item.icon className="h-[18px] w-[18px] shrink-0" /><span>{item.label}</span><span className="ml-auto flex items-center gap-1 text-[10px] font-semibold uppercase"><LockKeyhole className="h-3.5 w-3.5" />Off</span>
-                  </button>
+                  <Hint key={item.to} label={snAccess.message} className="w-full">
+                    <button type="button" disabled aria-disabled="true" className="flex w-full cursor-not-allowed items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-muted-foreground opacity-50">
+                      <item.icon className="h-[18px] w-[18px] shrink-0" /><span>{item.label}</span><span className="ml-auto flex items-center gap-1 text-[10px] font-semibold uppercase"><LockKeyhole className="h-3.5 w-3.5" />Off</span>
+                    </button>
+                  </Hint>
                 );
               }
             if (creditLocked) {

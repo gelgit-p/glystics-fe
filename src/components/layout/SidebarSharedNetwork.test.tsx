@@ -24,7 +24,8 @@ describe('Sidebar Shared Network button', () => {
     renderSidebar();
     const btn = await screen.findByRole('button', { name: /Shared Network/i });
     expect(btn).toBeDisabled();
-    await vi.waitFor(() => expect(btn).toHaveAttribute('title', 'Off for maintenance'));
+    // Disabled state + explanation moved to the Radix tooltip (Hint); native title was removed so it cannot double-show.
+    expect(btn).not.toHaveAttribute('title');
     expect(screen.queryByRole('link', { name: /Shared Network/i })).not.toBeInTheDocument();
   });
   it('is a link when the network is ON', async () => {
