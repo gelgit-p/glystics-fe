@@ -30,7 +30,7 @@ export default function SharedNetworkLayout() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground"><Network className="h-5 w-5" /></div>
-          <div><h1 className="text-xl font-bold">Shared Delivery Network</h1><p className="text-sm text-muted-foreground">{q.data.businessName} · {q.data.wallet?.balance ?? 0} Billing credits · {q.data.accessEnabled === false ? 'Deactivated' : q.data.status}</p></div>
+          <div><h1 className="text-xl font-bold">Shared Delivery Network</h1><p className="text-sm text-muted-foreground">{q.data.businessName} · {q.data.billingBalance ?? q.data.wallet?.balance ?? 0} Billing credits · {q.data.accessEnabled === false ? 'Deactivated' : q.data.status}</p></div>
         </div>
       </div>
       <nav className="flex gap-1 overflow-x-auto border-b border-border pb-px" aria-label="Shared Network">

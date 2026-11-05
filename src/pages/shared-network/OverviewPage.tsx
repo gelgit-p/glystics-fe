@@ -12,7 +12,7 @@ export default function SNOverviewPage() {
   if (a.isLoading || b.isLoading) return <LoadingState text="Loading network overview..." />;
   if (a.isError) return <p className="text-sm text-destructive">{(a.error as Error).message}</p>;
   const stats = [
-    ['Active subscription', b.data?.subscription?.plan?.name ?? 'No subscription'], ['Billing credits', String(b.data?.wallet?.balance ?? 0)],
+    ['Active subscription', b.data?.subscription?.plan?.name ?? 'No subscription'], ['Billing credits', String(b.data?.balance ?? b.data?.billingWallet?.balance ?? b.data?.wallet?.balance ?? 0)],
     ['Reserved capacity', String(a.data?.reservedCapacity ?? 0)], ['Used capacity', String(a.data?.usedCapacity ?? 0)],
     ['Active pools', String(a.data?.activePools ?? 0)], ['Pooled deliveries', String(a.data?.pooledDeliveries ?? 0)],
     ['Estimated savings', naira(a.data?.estimatedSavingsKobo)], ['Monthly expenditure', naira(a.data?.monthlyExpenditureKobo)],

@@ -15,7 +15,7 @@ export default function SNCapacityPage() {
   const [region, setRegion] = useState('Lagos'); const [qty, setQty] = useState(10); const [pickup, setPickup] = useState('');
   const cap = useQuery({ queryKey: ['sn-capacity', region], queryFn: () => sharedNetworkApi.availableCapacity(region) });
   const res = useQuery({ queryKey: ['sn-reservations'], queryFn: sharedNetworkApi.reservations });
-  const invalidate = () => { qc.invalidateQueries({ queryKey: ['sn-capacity'] }); qc.invalidateQueries({ queryKey: ['sn-reservations'] }); qc.invalidateQueries({ queryKey: ['sn-business'] }); };
+  const invalidate = () => { qc.invalidateQueries({ queryKey: ['sn-capacity'] }); qc.invalidateQueries({ queryKey: ['sn-reservations'] }); qc.invalidateQueries({ queryKey: ['sn-business'] }); qc.invalidateQueries({ queryKey: ['sn-credits'] }); qc.invalidateQueries({ queryKey: ['sn-billing'] }); };
   const reserve = useMutation({ mutationFn: (c: AnyRecord) => sharedNetworkApi.createReservation({ capacityId: c.id, quantity: qty, pickupLocation: pickup || c.region, idempotencyKey: `web-${c.id}-${Date.now()}` }), onSuccess: () => { toast.success('Capacity reserved'); invalidate(); }, onError: (e: Error) => toast.error(e.message) });
   const cancel = useMutation({ mutationFn: sharedNetworkApi.cancelReservation, onSuccess: () => { toast.success('Reservation cancelled and credits refunded'); invalidate(); }, onError: (e: Error) => toast.error(e.message) });
   if (cap.isLoading) return <LoadingState text="Checking available capacity..." />;
