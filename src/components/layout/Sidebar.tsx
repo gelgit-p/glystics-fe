@@ -28,9 +28,14 @@ import { sharedNetworkApi, sharedNetworkAccessState } from '@/lib/shared-network
 
 function useSharedNetworkDisabled() {
   const enabled = Boolean(localStorage.getItem('accessToken'));
-  const status = useQuery({ queryKey: ['sn-status'], queryFn: sharedNetworkApi.status, enabled, staleTime: 15_000 });
-  const business = useQuery({ queryKey: ['sn-business'], queryFn: sharedNetworkApi.business, enabled, staleTime: 15_000 });
-  return sharedNetworkAccessState(status.data, business.data);
+  const status = useQuery({ queryKey: ['sn-status'], queryFn: sharedNetworkApi.status, enabled, staleTime: 5_000, refetchInterval: 15_000, refetchOnWindowFocus: true, refetchOnMount: 'always' });
+  const business = useQuery({ queryKey: ['sn-business'], queryFn: sharedNetworkApi.business, enabled, staleTime: 5_000, refetchInterval: 15_000, refetchOnWindowFocus: true, refetchOnMount: 'always' });
+  // Fail closed: while loading or on error we cannot prove the network is ON, so keep the button disabled.
+  const state = sharedNetworkAccessState(status.data, business.data);
+  if (state.disabled) return state;
+  if (status.isLoading || business.isLoading) return { disabled: true, message: 'Checking Shared Delivery Network availability...' } as const;
+  if (status.isError) return { disabled: true, message: 'Shared Delivery Network availability could not be verified.' } as const;
+  return state;
 }
 
 function useCreditAccess() {
@@ -158,7 +163,7 @@ export function Sidebar({ collapsed, setCollapsed }: { collapsed: boolean; setCo
               <button key={item.to} type="button" disabled title={snAccess.message} aria-disabled="true"
                 className="flex w-full cursor-not-allowed items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-muted-foreground opacity-50">
                 <item.icon className="h-[18px] w-[18px] shrink-0" />
-                {!collapsed && <><span>{item.label}</span><LockKeyhole className="ml-auto h-3.5 w-3.5" /></>}
+                {!collapsed && <><span>{item.label}</span><span className="ml-auto flex items-center gap-1 text-[10px] font-semibold uppercase"><LockKeyhole className="h-3.5 w-3.5" />Off</span></>}
               </button>
             );
           }
@@ -172,7 +177,7 @@ export function Sidebar({ collapsed, setCollapsed }: { collapsed: boolean; setCo
                 className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-muted-foreground opacity-50 transition-colors hover:bg-muted"
               >
                 <item.icon className="h-[18px] w-[18px] shrink-0" />
-                {!collapsed && <><span>{item.label}</span><LockKeyhole className="ml-auto h-3.5 w-3.5" /></>}
+                {!collapsed && <><span>{item.label}</span><span className="ml-auto flex items-center gap-1 text-[10px] font-semibold uppercase"><LockKeyhole className="h-3.5 w-3.5" />Off</span></>}
               </button>
             );
           }
@@ -264,7 +269,7 @@ export function MobileSidebar({ open, onClose }: { open: boolean; onClose: () =>
               if (snLocked) {
                 return (
                   <button key={item.to} type="button" disabled title={snAccess.message} aria-disabled="true" className="flex w-full cursor-not-allowed items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-muted-foreground opacity-50">
-                    <item.icon className="h-[18px] w-[18px] shrink-0" /><span>{item.label}</span><LockKeyhole className="ml-auto h-3.5 w-3.5" />
+                    <item.icon className="h-[18px] w-[18px] shrink-0" /><span>{item.label}</span><span className="ml-auto flex items-center gap-1 text-[10px] font-semibold uppercase"><LockKeyhole className="h-3.5 w-3.5" />Off</span>
                   </button>
                 );
               }
