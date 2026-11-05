@@ -1,0 +1,43 @@
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { sharedNetworkAdminApi, naira, fmtDate, type AnyRecord} from '@/lib/shared-network-api';
+import { LoadingState } from '@/components/shared';
+
+export default function AdminSharedNetworkPage() {
+  const qc = useQueryClient();
+  const o = useQuery({ queryKey: ['sn-admin-overview'], queryFn: sharedNetworkAdminApi.overview });
+  const biz = useQuery({ queryKey: ['sn-admin-biz'], queryFn: sharedNetworkAdminApi.businesses });
+  const plans = useQuery({ queryKey: ['sn-admin-plans'], queryFn: sharedNetworkAdminApi.plans });
+  const pools = useQuery({ queryKey: ['sn-admin-pools'], queryFn: sharedNetworkAdminApi.pools });
+  const txns = useQuery({ queryKey: ['sn-admin-txns'], queryFn: sharedNetworkAdminApi.transactions });
+  const audit = useQuery({ queryKey: ['sn-admin-audit'], queryFn: sharedNetworkAdminApi.audit });
+  const [cap, setCap] = useState({ date: new Date().toISOString().slice(0, 10), region: 'Lagos', window: 'AFTERNOON', vehicleType: 'BIKE', totalCapacity: 100, pricePerSlotCredits: 1, pricePerSlotKobo: 0 });
+  const [adj, setAdj] = useState({ businessId: '', amount: 10, reason: '' });
+  const [plan, setPlan] = useState({ name: '', monthlyPriceKobo: 0, monthlyDeliveryVolume: 100, reservedCapacityAllowance: 20, maxActiveSlots: 5, discountPercent: 0 });
+  const inv = () => { qc.invalidateQueries({ queryKey: ['sn-admin-biz'] }); qc.invalidateQueries({ queryKey: ['sn-admin-plans'] }); qc.invalidateQueries({ queryKey: ['sn-admin-overview'] }); qc.invalidateQueries({ queryKey: ['sn-admin-audit'] }); };
+  const status = useMutation({ mutationFn: (x: AnyRecord) => sharedNetworkAdminApi.setBusinessStatus(x.id, x.status), onSuccess: () => { toast.success('Updated (audit logged)'); inv(); }, onError: (e: Error) => toast.error(e.message) });
+  const capMut = useMutation({ mutationFn: () => sharedNetworkAdminApi.upsertCapacity({ ...cap, totalCapacity: Number(cap.totalCapacity), pricePerSlotCredits: Number(cap.pricePerSlotCredits), pricePerSlotKobo: Number(cap.pricePerSlotKobo) }), onSuccess: () => { toast.success('Capacity saved'); inv(); }, onError: (e: Error) => toast.error(e.message) });
+  const adjMut = useMutation({ mutationFn: () => sharedNetworkAdminApi.adjustCredits({ ...adj, amount: Number(adj.amount) }), onSuccess: () => { toast.success('Credits adjusted (audit logged)'); inv(); }, onError: (e: Error) => toast.error(e.message) });
+  const planMut = useMutation({ mutationFn: () => sharedNetworkAdminApi.upsertPlan({ ...plan, monthlyPriceKobo: Number(plan.monthlyPriceKobo) }), onSuccess: () => { toast.success('Plan saved'); inv(); }, onError: (e: Error) => toast.error(e.message) });
+  if (o.isLoading) return <LoadingState text="Loading network admin..." />;
+  return <div className="space-y-6">
+    <h1 className="text-2xl font-bold">Shared Delivery Network — Admin</h1>
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">{[['Businesses', o.data?.businesses], ['Active subscriptions', o.data?.activeSubscriptions], ['Active pools', o.data?.activePools], ['Network revenue', naira(o.data?.revenueKobo)], ['Reserved capacity', o.data?.reservedCapacity]].map(([l, v]) => <Card key={l as string}><CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">{l}</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold">{v}</p></CardContent></Card>)}</div>
+    <Card><CardHeader><CardTitle>Registered businesses</CardTitle></CardHeader><CardContent>{(biz.data ?? []).map((b: AnyRecord) => <div key={b.id} className="flex flex-wrap items-center justify-between gap-2 border-b py-3 text-sm last:border-0"><span><strong>{b.businessName}</strong> · {b.businessEmail} · {b.subscriptions?.[0]?.plan?.name ?? 'PAYG'} · {b.wallet?.balance ?? 0} credits</span><span className="flex gap-2"><span className="text-muted-foreground">{b.status}</span><Button size="sm" variant="outline" onClick={() => status.mutate({ id: b.id, status: b.status === 'SUSPENDED' ? 'ACTIVE' : 'SUSPENDED' })}>{b.status === 'SUSPENDED' ? 'Reactivate' : 'Suspend'}</Button><Button size="sm" variant="ghost" onClick={() => setAdj({ ...adj, businessId: b.id })}>Adjust credits</Button></span></div>)}{(biz.data ?? []).length === 0 && <p className="text-sm text-muted-foreground">No network businesses yet.</p>}</CardContent></Card>
+    <div className="grid gap-6 lg:grid-cols-3">
+      <Card><CardHeader><CardTitle>Capacity management</CardTitle></CardHeader><CardContent className="grid gap-3">{(['date', 'region', 'window', 'vehicleType', 'totalCapacity', 'pricePerSlotCredits', 'pricePerSlotKobo'] as const).map((k) => <div key={k} className="space-y-1"><Label>{k}</Label><Input type={k === 'date' ? 'date' : typeof (cap as AnyRecord)[k] === 'number' ? 'number' : 'text'} value={(cap as AnyRecord)[k]} onChange={(e) => setCap({ ...cap, [k]: e.target.value })} /></div>)}<Button onClick={() => capMut.mutate()}>Publish capacity</Button></CardContent></Card>
+      <Card><CardHeader><CardTitle>Adjust credits (audited)</CardTitle></CardHeader><CardContent className="grid gap-3"><div className="space-y-1"><Label>Business ID</Label><Input value={adj.businessId} onChange={(e) => setAdj({ ...adj, businessId: e.target.value })} /></div><div className="space-y-1"><Label>Amount (+/-)</Label><Input type="number" value={adj.amount} onChange={(e) => setAdj({ ...adj, amount: Number(e.target.value) })} /></div><div className="space-y-1"><Label>Reason</Label><Input value={adj.reason} onChange={(e) => setAdj({ ...adj, reason: e.target.value })} /></div><Button disabled={!adj.businessId || !adj.reason} onClick={() => adjMut.mutate()}>Apply adjustment</Button></CardContent></Card>
+      <Card><CardHeader><CardTitle>Pricing / plan configuration</CardTitle></CardHeader><CardContent className="grid gap-3">{(['name', 'monthlyPriceKobo', 'monthlyDeliveryVolume', 'reservedCapacityAllowance', 'maxActiveSlots', 'discountPercent'] as const).map((k) => <div key={k} className="space-y-1"><Label>{k}</Label><Input type={k === 'name' ? 'text' : 'number'} value={(plan as AnyRecord)[k]} onChange={(e) => setPlan({ ...plan, [k]: e.target.value })} /></div>)}<Button disabled={!plan.name} onClick={() => planMut.mutate()}>Save plan</Button><div className="space-y-1 text-sm">{(plans.data ?? []).map((p) => <p key={p.id}>{p.name} — {naira(p.monthlyPriceKobo)}/mo</p>)}</div></CardContent></Card>
+    </div>
+    <div className="grid gap-6 lg:grid-cols-2">
+      <Card><CardHeader><CardTitle>Shared pools</CardTitle></CardHeader><CardContent>{(pools.data ?? []).map((p: AnyRecord) => <div key={p.id} className="flex justify-between border-b py-2 text-sm last:border-0"><span>{p.name} · {p.region} {p.window}</span><span>{p.totalDeliveries} deliveries · {p.businessCount} businesses · {p.status}</span></div>)}{(pools.data ?? []).length === 0 && <p className="text-sm text-muted-foreground">No pools.</p>}</CardContent></Card>
+      <Card><CardHeader><CardTitle>Billing & transactions</CardTitle></CardHeader><CardContent>{(txns.data ?? []).slice(0, 20).map((t: AnyRecord) => <div key={t.id} className="flex justify-between border-b py-2 text-sm last:border-0"><span>{t.business?.businessName} · {t.description}</span><span>{naira(t.amountKobo)} · {t.status}</span></div>)}{(txns.data ?? []).length === 0 && <p className="text-sm text-muted-foreground">No transactions.</p>}</CardContent></Card>
+    </div>
+    <Card><CardHeader><CardTitle>Audit log</CardTitle></CardHeader><CardContent>{(audit.data ?? []).slice(0, 20).map((a: AnyRecord) => <div key={a.id} className="flex justify-between border-b py-2 text-sm last:border-0"><span>{a.action} · {a.entityType}</span><span className="text-muted-foreground">{fmtDate(a.createdAt)}</span></div>)}{(audit.data ?? []).length === 0 && <p className="text-sm text-muted-foreground">No audit entries yet. All financial/admin actions are logged here.</p>}</CardContent></Card>
+  </div>;
+}

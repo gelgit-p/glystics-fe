@@ -45,6 +45,20 @@ const AdminWhatsappPage = lazy(() => import('@/pages/admin/whatsapp/AdminWhatsap
 const AdminAiPage = lazy(() => import('@/pages/admin/ai/AdminAiPage'));
 const AdminAiConversationPage = lazy(() => import('@/pages/admin/ai/AdminAiConversationPage'));
 const AdminOverviewPage = lazy(() => import('@/pages/admin/overview/AdminOverviewPage'));
+const SNInfoPage = lazy(() => import('@/pages/shared-network/InfoPage'));
+const SNJoinPage = lazy(() => import('@/pages/shared-network/JoinPage'));
+const SNLayout = lazy(() => import('@/pages/shared-network/SharedNetworkLayout'));
+const SNOverviewPage = lazy(() => import('@/pages/shared-network/OverviewPage'));
+const SNCapacityPage = lazy(() => import('@/pages/shared-network/CapacityPage'));
+const SNSlotsPage = lazy(() => import('@/pages/shared-network/SlotsPage'));
+const SNPoolsPage = lazy(() => import('@/pages/shared-network/PoolsPage'));
+const SNDeliveriesPage = lazy(() => import('@/pages/shared-network/DeliveriesPage'));
+const SNCreditsPage = lazy(() => import('@/pages/shared-network/CreditsPage'));
+const SNBillingPage = lazy(() => import('@/pages/shared-network/BillingPage'));
+const SNAiPage = lazy(() => import('@/pages/shared-network/AiPage'));
+const SNAnalyticsPage = lazy(() => import('@/pages/shared-network/AnalyticsPage'));
+const SNSettingsPage = lazy(() => import('@/pages/shared-network/SettingsPage'));
+const AdminSharedNetworkPage = lazy(() => import('@/pages/admin/shared-network/AdminSharedNetworkPage'));
 
 function PageLoader() {
   return <LoadingState text="Loading page..." />;
@@ -68,6 +82,7 @@ export default function App() {
         <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/" element={<LandingPage />} />
+            <Route path="/shared-network-info" element={<SNInfoPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
@@ -103,6 +118,7 @@ export default function App() {
               <Route path="/admin/whatsapp" element={<AdminWhatsappPage />} />
               <Route path="/admin/ai" element={<AdminAiPage />} />
               <Route path="/admin/ai/conversations/:id" element={<AdminAiConversationPage />} />
+              <Route path="/admin/shared-network" element={<AdminSharedNetworkPage />} />
             </Route>
 
             <Route element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
@@ -120,6 +136,19 @@ export default function App() {
               <Route path="/ai/approvals" element={<CreditAccessGate><AiApprovalsPage /></CreditAccessGate>} />
               <Route path="/ai/audit" element={<CreditAccessGate><AiAuditPage /></CreditAccessGate>} />
               <Route path="/billing" element={<BillingPage />} />
+              <Route path="/shared-network/join" element={<SNJoinPage />} />
+              <Route element={<SNLayout />}>
+                <Route path="/shared-network" element={<SNOverviewPage />} />
+                <Route path="/shared-network/capacity" element={<SNCapacityPage />} />
+                <Route path="/shared-network/slots" element={<SNSlotsPage />} />
+                <Route path="/shared-network/pools" element={<SNPoolsPage />} />
+                <Route path="/shared-network/deliveries" element={<SNDeliveriesPage />} />
+                <Route path="/shared-network/credits" element={<SNCreditsPage />} />
+                <Route path="/shared-network/billing" element={<SNBillingPage />} />
+                <Route path="/shared-network/ai" element={<SNAiPage />} />
+                <Route path="/shared-network/analytics" element={<SNAnalyticsPage />} />
+                <Route path="/shared-network/settings" element={<SNSettingsPage />} />
+              </Route>
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/settings/profile" element={<ProfileSettingsPage />} />
               <Route path="/settings/team" element={<TeamSettingsPage />} />

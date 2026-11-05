@@ -17,6 +17,7 @@ import {
   FileText,
   CheckCircle2,
   History,
+  Network,
   Home,
   MoreHorizontal,
   ShieldCheck,
@@ -73,6 +74,7 @@ const navItems = [
   { to: '/ai/approvals', label: 'AI Approvals', icon: CheckCircle2 },
   { to: '/ai/audit', label: 'AI Audit', icon: History },
   { to: '/billing', label: 'Billing', icon: CreditCard },
+  { to: '/shared-network', label: 'Shared Network', icon: Network },
 ];
 
 const bottomTabs = [

@@ -61,6 +61,7 @@ export default function LandingPage() {
           <div className="hidden items-center gap-8 md:flex">
             <a href="#ai-agent" className="text-sm font-medium text-muted-foreground hover:text-foreground">AI Agent</a>
             <a href="#features" className="text-sm font-medium text-muted-foreground hover:text-foreground">Features</a>
+            <Link to="/shared-network-info" className="text-sm font-medium text-muted-foreground hover:text-foreground">Shared Delivery Network</Link>
             <a href="#how-it-works" className="text-sm font-medium text-muted-foreground hover:text-foreground">How it works</a>
             <a href="#workflow" className="text-sm font-medium text-muted-foreground hover:text-foreground">Workflow</a>
             <a href="#pricing" className="text-sm font-medium text-muted-foreground hover:text-foreground">Pricing</a>
@@ -230,6 +231,9 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* Shared Delivery Network */}
+      <section className="border-t border-border bg-primary text-primary-foreground py-20"><div className="mx-auto max-w-5xl px-4 text-center"><p className="text-sm font-medium opacity-80">New product · Dispatchly Shared Delivery Network</p><h2 className="mt-3 text-3xl font-bold sm:text-4xl">Your Business. Our Network. Smarter Deliveries.</h2><p className="mx-auto mt-4 max-w-2xl opacity-90">Access shared courier capacity, reserve delivery slots, pool deliveries with other businesses and reduce fulfilment costs through one intelligent delivery network. One delivery network. Multiple businesses. Smarter logistics.</p><div className="mt-8 flex flex-wrap justify-center gap-3"><Link to="/shared-network-info" className="rounded-lg bg-white px-6 py-3 text-sm font-semibold text-primary">Join the Network</Link><Link to="/shared-network-info" className="rounded-lg border border-white/40 px-6 py-3 text-sm font-semibold">Explore How It Works</Link></div><div className="mx-auto mt-10 grid max-w-4xl gap-3 text-left text-sm sm:grid-cols-3">{['Shared delivery capacity','Scheduled morning / afternoon / evening slots','Shared pools that cut per-delivery cost','Separate network credits & subscriptions','AI dispatch recommendations','Savings & utilization analytics'].map((x) => <div key={x} className="rounded-lg bg-white/10 px-4 py-3">{x}</div>)}</div></div></section>
 
       {/* How it works */}
       <section id="how-it-works" className="border-t border-border py-20">
