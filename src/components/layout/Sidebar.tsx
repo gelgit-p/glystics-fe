@@ -12,10 +12,32 @@ import {
   ChevronLeft,
   MessageCircle,
   LockKeyhole,
+  Sparkles,
+  Inbox,
+  FileText,
+  CheckCircle2,
+  History,
+  Network,
+  Home,
+  MoreHorizontal,
+  ShieldCheck,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useState } from 'react';
 import { authenticatedFetch as fetch } from '@/lib/authenticated-fetch';
+import { sharedNetworkApi, sharedNetworkAccessState } from '@/lib/shared-network-api';
+import { Hint } from '@/components/ui/hint';
+
+function useSharedNetworkDisabled() {
+  const enabled = Boolean(localStorage.getItem('accessToken'));
+  const status = useQuery({ queryKey: ['sn-status'], queryFn: sharedNetworkApi.status, enabled, staleTime: 5_000, refetchInterval: 15_000, refetchOnWindowFocus: true, refetchOnMount: 'always' });
+  const business = useQuery({ queryKey: ['sn-business'], queryFn: sharedNetworkApi.business, enabled, staleTime: 5_000, refetchInterval: 15_000, refetchOnWindowFocus: true, refetchOnMount: 'always' });
+  // Fail closed: while loading or on error we cannot prove the network is ON, so keep the button disabled.
+  const state = sharedNetworkAccessState(status.data, business.data);
+  if (state.disabled) return state;
+  if (status.isLoading || business.isLoading) return { disabled: true, message: 'Checking Shared Delivery Network availability...' } as const;
+  if (status.isError) return { disabled: true, message: 'Shared Delivery Network availability could not be verified.' } as const;
+  return state;
+}
 
 function useCreditAccess() {
   const userId = localStorage.getItem('userId') ?? '';
@@ -38,6 +60,21 @@ function useCreditAccess() {
   return data?.hasPurchasedCredits === true;
 }
 
+const CREDIT_LOCKED_ROUTES = [
+  '/deliveries',
+  '/notifications',
+  '/templates',
+  '/automations',
+  '/whatsapp',
+  '/ai',
+  '/ai/inbox',
+  '/ai/drafts',
+  '/ai/approvals',
+  '/ai/audit',
+];
+
+const isSuperAdmin = () => localStorage.getItem('userRole') === 'SUPER_ADMIN';
+
 const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/deliveries', label: 'Deliveries', icon: Package },
@@ -45,18 +82,63 @@ const navItems = [
   { to: '/templates', label: 'Templates', icon: MessageSquare },
   { to: '/automations', label: 'Automations', icon: Zap },
   { to: '/whatsapp', label: 'WhatsApp', icon: MessageCircle },
+  { to: '/ai', label: 'Dispatchly AI', icon: Sparkles },
+  { to: '/ai/inbox', label: 'AI Inbox', icon: Inbox },
+  { to: '/ai/drafts', label: 'AI Drafts', icon: FileText },
+  { to: '/ai/approvals', label: 'AI Approvals', icon: CheckCircle2 },
+  { to: '/ai/audit', label: 'AI Audit', icon: History },
   { to: '/billing', label: 'Billing', icon: CreditCard },
+  { to: '/shared-network', label: 'Shared Network', icon: Network },
 ];
+
+const bottomTabs = [
+  { to: '/dashboard', label: 'Home', icon: Home },
+  { to: '/deliveries', label: 'Deliveries', icon: Package },
+  { to: '/automations', label: 'Automation', icon: Zap },
+  { to: '/billing', label: 'Credits', icon: CreditCard },
+];
+
+export function MobileBottomNav({ onMore }: { onMore: () => void }) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const hasPurchasedCredits = useCreditAccess();
+  const moreActive = ['/ai', '/whatsapp', '/notifications', '/templates', '/settings'].some((x) => location.pathname.startsWith(x));
+  return (
+    <nav aria-label="Primary" className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
+      <div className="grid grid-cols-5">
+        {bottomTabs.map((item) => {
+          const active = location.pathname.startsWith(item.to);
+          const locked = CREDIT_LOCKED_ROUTES.includes(item.to) && !hasPurchasedCredits;
+          return (
+            <button key={item.to} type="button" aria-current={active ? 'page' : undefined} aria-label={locked ? `${item.label}, locked. Purchase credits to unlock` : item.label}
+              onClick={() => navigate(locked ? '/billing?purchaseRequired=true' : item.to)}
+              className={`flex min-h-[56px] flex-col items-center justify-center gap-1 px-1 text-[11px] font-medium ${active ? 'text-primary' : 'text-muted-foreground'} ${locked ? 'opacity-50' : ''}`}>
+              <span className="relative"><item.icon className="h-5 w-5" />{locked && <LockKeyhole className="absolute -right-2 -top-1 h-3 w-3" />}</span>
+              <span>{item.label}</span>
+            </button>
+          );
+        })}
+        <button type="button" aria-current={moreActive ? 'page' : undefined} aria-label="More sections" onClick={onMore}
+          className={`flex min-h-[56px] flex-col items-center justify-center gap-1 px-1 text-[11px] font-medium ${moreActive ? 'text-primary' : 'text-muted-foreground'}`}>
+          <MoreHorizontal className="h-5 w-5" /><span>More</span>
+        </button>
+      </div>
+    </nav>
+  );
+}
 
 export function Sidebar({ collapsed, setCollapsed }: { collapsed: boolean; setCollapsed: (v: boolean) => void }) {
   const location = useLocation();
   const navigate = useNavigate();
   const hasPurchasedCredits = useCreditAccess();
+  const snAccess = useSharedNetworkDisabled();
 
   return (
     <aside
+      aria-label="Desktop navigation"
       className={cn(
-        'fixed left-0 top-0 z-40 flex h-screen flex-col border-r border-sidebar-border bg-sidebar transition-all duration-300',
+        // Mobile uses Topbar (hamburger drawer) + bottom nav; never overlay content with the rail.
+        'fixed left-0 top-0 z-40 hidden h-screen flex-col border-r border-sidebar-border bg-sidebar transition-all duration-300 lg:flex',
         collapsed ? 'w-[68px]' : 'w-64',
       )}
     >
@@ -75,20 +157,29 @@ export function Sidebar({ collapsed, setCollapsed }: { collapsed: boolean; setCo
       <nav className="flex-1 space-y-1 overflow-y-auto scrollbar-thin p-3">
         {navItems.map((item) => {
           const active = location.pathname.startsWith(item.to);
-          const creditLocked =
-            ['/deliveries', '/notifications', '/templates', '/automations', '/whatsapp'].includes(item.to) &&
-            !hasPurchasedCredits;
+          const creditLocked = CREDIT_LOCKED_ROUTES.includes(item.to) && !hasPurchasedCredits;
+          const snLocked = item.to === '/shared-network' && snAccess.disabled;
+          if (snLocked) {
+            return (
+              <Hint key={item.to} label={snAccess.message} className="w-full">
+                <button type="button" disabled aria-disabled="true"
+                  className="flex w-full cursor-not-allowed items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-muted-foreground opacity-50">
+                  <item.icon className="h-[18px] w-[18px] shrink-0" />
+                  {!collapsed && <><span>{item.label}</span><span className="ml-auto flex items-center gap-1 text-[10px] font-semibold uppercase"><LockKeyhole className="h-3.5 w-3.5" />Off</span></>}
+                </button>
+              </Hint>
+            );
+          }
           if (creditLocked) {
             return (
               <button
                 key={item.to}
                 type="button"
-                title="Purchase credits to unlock this page"
-                onClick={() => navigate('/billing?purchaseRequired=true')}
+                title="Purchase credits to unlock this page" onClick={() => navigate('/billing?purchaseRequired=true')}
                 className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-muted-foreground opacity-50 transition-colors hover:bg-muted"
               >
                 <item.icon className="h-[18px] w-[18px] shrink-0" />
-                {!collapsed && <><span>{item.label}</span><LockKeyhole className="ml-auto h-3.5 w-3.5" /></>}
+                {!collapsed && <><span>{item.label}</span><span className="ml-auto flex items-center gap-1 text-[10px] font-semibold uppercase"><LockKeyhole className="h-3.5 w-3.5" />Off</span></>}
               </button>
             );
           }
@@ -104,13 +195,27 @@ export function Sidebar({ collapsed, setCollapsed }: { collapsed: boolean; setCo
               )}
             >
               <item.icon className="h-[18px] w-[18px] shrink-0" />
-              {!collapsed && <span>{item.label}</span>}
+              {!collapsed ? <span>{item.label}</span> : <span className="sr-only">{item.label}</span>}
             </NavLink>
           );
         })}
       </nav>
 
       <div className="space-y-1 border-t border-sidebar-border p-3">
+        {isSuperAdmin() && (
+          <NavLink
+            to="/admin"
+            className={({ isActive }) =>
+              cn(
+                'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                isActive ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+              )
+            }
+          >
+            <ShieldCheck className="h-[18px] w-[18px] shrink-0" />
+            {!collapsed && <span>Super Admin</span>}
+          </NavLink>
+        )}
         <NavLink
           to="/settings"
           className={({ isActive }) =>
@@ -126,12 +231,14 @@ export function Sidebar({ collapsed, setCollapsed }: { collapsed: boolean; setCo
       </div>
 
       <div className="border-t border-sidebar-border p-3">
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="flex w-full items-center justify-center rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
-        >
-          <ChevronLeft className={cn('h-4 w-4 transition-transform', collapsed && 'rotate-180')} />
-        </button>
+        <Hint label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
+          <button type="button" aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            onClick={() => setCollapsed(!collapsed)}
+            className="flex w-full items-center justify-center rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
+            <ChevronLeft className={cn('h-4 w-4 transition-transform', collapsed && 'rotate-180')} />
+          </button>
+        </Hint>
       </div>
     </aside>
   );
@@ -141,6 +248,7 @@ export function MobileSidebar({ open, onClose }: { open: boolean; onClose: () =>
   const location = useLocation();
   const navigate = useNavigate();
   const hasPurchasedCredits = useCreditAccess();
+  const snAccess = useSharedNetworkDisabled();
 
   return (
     <>
@@ -160,9 +268,17 @@ export function MobileSidebar({ open, onClose }: { open: boolean; onClose: () =>
         <nav className="flex-1 space-y-1 overflow-y-auto scrollbar-thin p-3">
           {navItems.map((item) => {
             const active = location.pathname.startsWith(item.to);
-            const creditLocked =
-              ['/deliveries', '/notifications', '/templates', '/automations', '/whatsapp'].includes(item.to) &&
-              !hasPurchasedCredits;
+              const creditLocked = CREDIT_LOCKED_ROUTES.includes(item.to) && !hasPurchasedCredits;
+              const snLocked = item.to === '/shared-network' && snAccess.disabled;
+              if (snLocked) {
+                return (
+                  <Hint key={item.to} label={snAccess.message} className="w-full">
+                    <button type="button" disabled aria-disabled="true" className="flex w-full cursor-not-allowed items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-muted-foreground opacity-50">
+                      <item.icon className="h-[18px] w-[18px] shrink-0" /><span>{item.label}</span><span className="ml-auto flex items-center gap-1 text-[10px] font-semibold uppercase"><LockKeyhole className="h-3.5 w-3.5" />Off</span>
+                    </button>
+                  </Hint>
+                );
+              }
             if (creditLocked) {
               return (
                 <button

@@ -1,3 +1,4 @@
+import { Hint } from '@/components/ui/hint';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -31,6 +32,15 @@ interface UserDetails {
 }
 
 const pageTitles: Record<string, string> = {
+  '/admin': 'Platform overview',
+  '/admin/users': 'Users',
+  '/admin/deliveries': 'Deliveries',
+  '/admin/billing': 'Billing & Credits',
+  '/admin/notifications': 'Notifications',
+  '/admin/templates': 'Templates',
+  '/admin/automations': 'Automations',
+  '/admin/whatsapp': 'WhatsApp',
+  '/admin/ai': 'AI Agents',
   '/dashboard': 'Dashboard',
   '/deliveries': 'Deliveries',
   '/notifications': 'Notifications',
@@ -104,6 +114,7 @@ export function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
       localStorage.removeItem('userId');
+      localStorage.removeItem('userRole');
       navigate('/login');
     }
   };
@@ -115,12 +126,11 @@ export function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border bg-background/80 px-4 backdrop-blur-md lg:px-6">
-      <button
-        onClick={onMenuClick}
-        className="rounded-lg p-2 text-muted-foreground hover:bg-muted lg:hidden"
-      >
-        <Menu className="h-5 w-5" />
-      </button>
+      <Hint label="Open menu">
+        <button type="button" aria-label="Open menu" onClick={onMenuClick} className="rounded-lg p-2 text-muted-foreground hover:bg-muted lg:hidden">
+          <Menu className="h-5 w-5" />
+        </button>
+      </Hint>
 
       <h1 className="hidden text-lg font-semibold sm:block">{getPageTitle()}</h1>
 
@@ -140,14 +150,18 @@ export function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
           <span className="truncate">{user?.businessName || 'Business'}</span>
         </div>
 
-        <button className="relative rounded-lg p-2 text-muted-foreground hover:bg-muted">
-          <Bell className="h-[18px] w-[18px]" />
-          <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-primary ring-2 ring-background" />
-        </button>
+        <Hint label="Notifications">
+          <button type="button" aria-label="Notifications" className="relative rounded-lg p-2 text-muted-foreground hover:bg-muted">
+            <Bell className="h-[18px] w-[18px]" />
+            <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-primary ring-2 ring-background" />
+          </button>
+        </Hint>
 
-        <button className="rounded-lg p-2 text-muted-foreground hover:bg-muted">
-          <HelpCircle className="h-[18px] w-[18px]" />
-        </button>
+        <Hint label="Help & support">
+          <button type="button" aria-label="Help and support" className="rounded-lg p-2 text-muted-foreground hover:bg-muted">
+            <HelpCircle className="h-[18px] w-[18px]" />
+          </button>
+        </Hint>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

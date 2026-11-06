@@ -180,6 +180,17 @@ export default function NotificationsPage() {
             description="No notifications match your current filters."
           />
         ) : (
+          <>
+          <div className="space-y-3 p-4 md:hidden">
+            {notifications.map((n) => (
+              <button key={n.id} type="button" onClick={() => setSelected(n)} className="w-full rounded-lg border border-border p-4 text-left">
+                <div className="flex items-start justify-between gap-3"><span className="font-medium">{n.recipientPhone}</span><StatusBadge status={n.status ?? 'unknown'} /></div>
+                <p className="mt-2 font-mono text-xs text-muted-foreground">{n.templateName}</p>
+                <p className="mt-1 text-xs text-muted-foreground">Sent {formatDate(n.sendAt)}</p>
+              </button>
+            ))}
+          </div>
+          <div className="hidden md:block">
           <Table>
             <TableHeader>
               <TableRow>
@@ -212,6 +223,8 @@ export default function NotificationsPage() {
               ))}
             </TableBody>
           </Table>
+          </div>
+          </>
         )}
       </div>
 

@@ -103,7 +103,7 @@ const serviceTypes = [
   },
 ];
 
-/* =========================================================
+/* =====================Delki====================================
  * TYPES
  * ======================================================= */
 
@@ -125,7 +125,8 @@ interface DeliveryRecord {
   receiverPhone: string;
   senderAddress: string;
   receiverAddress: string;
-  deliveryStatus: string;
+  // Prisma Delivery.deliveryStatus is nullable; older/AI-created rows may have no status yet.
+  deliveryStatus: string | null;
   checkoutUrl?: string | null;
   createdAt: string;
   courier_name?: string | null;
@@ -161,7 +162,9 @@ const isDeliveryRecord = (
     typeof record.receiverPhone === 'string' &&
     typeof record.senderAddress === 'string' &&
     typeof record.receiverAddress === 'string' &&
-    typeof record.deliveryStatus === 'string' &&
+    (record.deliveryStatus === null ||
+      record.deliveryStatus === undefined ||
+      typeof record.deliveryStatus === 'string') &&
     (record.checkoutUrl === undefined ||
       record.checkoutUrl === null ||
       typeof record.checkoutUrl === 'string') &&
@@ -533,7 +536,7 @@ export default function DeliveriesPage() {
 
   const [status, setStatus] = useState('all');
 
-  const [courier, setCourier] = useState('all');
+  const [courier] = useState('all');
 
   /* =======================================================
    * DIALOG STATE
@@ -798,7 +801,7 @@ export default function DeliveriesPage() {
           courier: delivery.courier_name || 'Not assigned',
           isPaymentPending: delivery.deliveryStatus === 'PAYMENT_PENDING',
           checkoutUrl: delivery.checkoutUrl ?? null,
-          status: delivery.deliveryStatus
+          status: (delivery.deliveryStatus ?? 'CREATED')
             .toLowerCase()
             .replace(/_/g, ' ')
             .replace(/\b\w/g, (character) => character.toUpperCase()),
@@ -3276,6 +3279,28 @@ export default function DeliveriesPage() {
             }
           />
         ) : (
+          <>
+          <div className="space-y-3 p-4 md:hidden" aria-label="Deliveries">
+            {deliveries.map((delivery) => (
+              <article key={delivery.id} className="rounded-lg border border-border p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <Link to={`/deliveries/${delivery.id}`} className="font-mono text-xs font-medium text-primary hover:underline">{delivery.trackingId}</Link>
+                  <StatusBadge status={delivery.status} />
+                </div>
+                <h3 className="mt-3 font-medium">{delivery.receiverName}</h3>
+                <p className="mt-1 text-sm text-muted-foreground">{delivery.destination}</p>
+                <dl className="mt-3 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                  <div><dt>Phone</dt><dd className="mt-0.5 text-sm text-foreground">{delivery.receiverPhone}</dd></div>
+                  <div><dt>From</dt><dd className="mt-0.5 text-sm text-foreground">{delivery.origin}</dd></div>
+                  <div><dt>Courier</dt><dd className="mt-0.5 text-sm text-foreground">{delivery.courier || 'Not assigned'}</dd></div>
+                  <div><dt>Created</dt><dd className="mt-0.5 text-sm text-foreground">{new Date(delivery.createdAt).toLocaleDateString('en-NG', { month: 'short', day: 'numeric' })}</dd></div>
+                </dl>
+                {delivery.isPaymentPending && delivery.checkoutUrl && <a href={delivery.checkoutUrl} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex min-h-[44px] items-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground">Complete payment</a>}
+                <Link to={`/deliveries/${delivery.id}`} className="mt-3 inline-flex min-h-[44px] items-center rounded-md border px-3 text-sm font-medium ml-0 sm:ml-2">View details</Link>
+              </article>
+            ))}
+          </div>
+          <div className="hidden md:block">
           <Table>
             <TableHeader>
               <TableRow>
@@ -3513,6 +3538,8 @@ export default function DeliveriesPage() {
               )}
             </TableBody>
           </Table>
+          </div>
+          </>
         )}
       </div>
     </div>

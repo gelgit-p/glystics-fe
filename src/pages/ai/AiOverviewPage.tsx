@@ -1,0 +1,67 @@
+import { Package } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Link, useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import { aiApi, type SenderProfileInput } from '@/lib/ai-api';
+import { EmptyState, ErrorState, LoadingState, PageHeader } from '@/components/shared';
+import { SenderProfileFields } from '@/components/ai/SenderProfileForm';
+import { DemoBanner } from './AiShared';
+
+const SAMPLE = 'Please deliver a laptop to Ada Lovelace 08012345678 at 12 Allen Avenue Ikeja Lagos, 2kg, worth 50000, pickup 2026-10-30';
+
+export default function AiOverviewPage() {
+  const qc = useQueryClient();
+  const navigate = useNavigate();
+  const [demoText, setDemoText] = useState(SAMPLE);
+  const [receiverAddress, setReceiverAddress] = useState('');
+  const [sender, setSender] = useState<SenderProfileInput>({ senderName: '', senderPhone: '', senderAddress: '12 Allen Avenue, Ikeja, Lagos', senderEmail: '' });
+  const [saveSender, setSaveSender] = useState(true);
+  const senderProfile = useQuery({ queryKey: ['ai-sender-profile'], queryFn: aiApi.senderProfile });
+  useEffect(() => {
+    if (senderProfile.data) setSender({ senderName: senderProfile.data.senderName ?? '', senderPhone: senderProfile.data.senderPhone ?? '', senderAddress: senderProfile.data.senderAddress ?? '12 Allen Avenue, Ikeja, Lagos', senderEmail: senderProfile.data.senderEmail ?? '' });
+  }, [senderProfile.data]);
+  const { data, isLoading, error, refetch } = useQuery({ queryKey: ['ai-overview'], queryFn: aiApi.overview });
+  const drafts = useQuery({ queryKey: ['ai-drafts'], queryFn: () => aiApi.drafts() });
+  const simulate = useMutation({
+    mutationFn: () => aiApi.simulateInbound(demoText, sender, saveSender, receiverAddress),
+    onSuccess: (r) => {
+      qc.invalidateQueries();
+      if (r.draft) { toast.success(`Draft created (${r.draft.status}) — opening it`); navigate(`/ai/drafts/${r.draft.id}`); }
+      else toast.success('Simulated message processed — no delivery draft detected');
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : 'Simulation failed'),
+  });
+  if (isLoading) return <LoadingState text="Loading Dispatchly AI..." />;
+  if (error) return <ErrorState onRetry={() => refetch()} />;
+  const missingSender = !sender.senderAddress?.trim();
+  return (
+    <div>
+      <PageHeader title="Dispatchly AI" description="WhatsApp conversations turned into validated, approved, trackable deliveries." />
+      <DemoBanner />
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {[['Conversations', data?.conversations ?? 0], ['Delivery drafts', data?.totalDrafts ?? 0], ['Awaiting approval', data?.pendingApprovals ?? 0], ['Audit events', data?.auditEvents ?? 0]].map(([l, v]) => (
+          <div key={l as string} className="rounded-lg border bg-card p-4"><p className="text-sm text-muted-foreground">{l}</p><p className="mt-1 text-3xl font-bold">{v}</p></div>
+        ))}
+      </div>
+      <div className="mt-6 rounded-lg border bg-card p-4">
+        <h2 className="font-semibold">Try it (demo simulation)</h2>
+        <p className="text-sm text-muted-foreground">Simulates a customer WhatsApp message through the same extraction → draft → quotes pipeline as the real webhook. Sender details below come from your profile and are seeded into the draft.</p>
+        <h3 className="mb-2 mt-4 text-sm font-medium">Sender (from your profile)</h3>
+        <SenderProfileFields value={sender} onChange={setSender} />
+        <label className="mt-2 flex items-center gap-2 text-sm"><input type="checkbox" checked={saveSender} onChange={(e) => setSaveSender(e.target.checked)} /> Save sender details to my profile</label>
+        {missingSender && <p className="mt-2 text-sm text-amber-600">Add a sender/pickup address so the draft can be priced immediately.</p>}
+        <h3 className="mb-2 mt-4 text-sm font-medium">Customer WhatsApp message</h3>
+        <p className="mb-2 text-xs text-muted-foreground">Each simulation starts a fresh conversation, so receiver details from previous demo runs do not leak into the new draft.</p>
+        <textarea className="w-full rounded-md border p-2 text-sm" rows={3} value={demoText} onChange={(e) => setDemoText(e.target.value)} />
+        <label className="mt-4 block text-sm font-medium">Receiver Address
+          <input className="mt-1 w-full rounded-md border p-2 font-normal" placeholder="Enter the exact receiver address for this simulation" value={receiverAddress} onChange={(e) => setReceiverAddress(e.target.value)} />
+        </label>
+        <p className="mt-1 text-xs text-muted-foreground">Used exactly as entered and overrides any address detected in the WhatsApp message. Leave empty to use the address parsed from the message.</p>
+        <button className="mt-3 rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-50" disabled={simulate.isPending} onClick={() => simulate.mutate()}>{simulate.isPending ? 'Processing...' : 'Simulate WhatsApp message'}</button>
+      </div>
+      <h2 className="mb-3 mt-8 font-semibold">Recent drafts</h2>
+      {drafts.data?.length ? <div className="space-y-2">{drafts.data.slice(0, 8).map((d) => <Link key={d.id} to={`/ai/drafts/${d.id}`} className="flex justify-between rounded-lg border bg-card p-3 text-sm hover:bg-accent"><span>{d.packageName ?? 'Unnamed package'} → {d.receiverName ?? 'Unknown receiver'}</span><span>{d.status}</span></Link>)}</div> : <EmptyState icon={Package} title="No AI drafts yet" description="Simulate a message above or connect WhatsApp to receive real customer messages." />}
+    </div>
+  );
+}

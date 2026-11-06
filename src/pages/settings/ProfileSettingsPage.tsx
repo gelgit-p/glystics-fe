@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { SenderProfileCard } from '@/components/ai/SenderProfileForm';
 
 interface UserProfile {
   fullName: string;
@@ -183,6 +184,7 @@ export default function ProfileSettingsPage() {
           </div>
         </form>
       </div>
+      <SenderProfileCard />
     </div>
   );
 }

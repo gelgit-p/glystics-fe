@@ -33,6 +33,9 @@ async function refreshAccessToken(): Promise<boolean> {
           typeof result.user.id === 'string'
         ) {
           localStorage.setItem('userId', result.user.id);
+          if ('role' in result.user && (result.user.role === 'USER' || result.user.role === 'SUPER_ADMIN')) {
+            localStorage.setItem('userRole', result.user.role);
+          }
         }
         return true;
       })
@@ -80,6 +83,7 @@ export async function authenticatedFetch(
   localStorage.removeItem('accessToken');
   localStorage.removeItem('refreshToken');
   localStorage.removeItem('userId');
+  localStorage.removeItem('userRole');
   if (window.location.pathname !== '/login') {
     window.location.assign('/login');
   }
