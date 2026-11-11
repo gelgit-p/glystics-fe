@@ -18,6 +18,7 @@ import {
   CheckCircle2,
   History,
   Network,
+  Truck,
   Home,
   MoreHorizontal,
   ShieldCheck,
@@ -74,6 +75,7 @@ const CREDIT_LOCKED_ROUTES = [
 ];
 
 const isSuperAdmin = () => localStorage.getItem('userRole') === 'SUPER_ADMIN';
+const canAccessLogisticsProvider = () => localStorage.getItem('userRole') === 'LOGISTICS_PROVIDER';
 
 const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -202,6 +204,20 @@ export function Sidebar({ collapsed, setCollapsed }: { collapsed: boolean; setCo
       </nav>
 
       <div className="space-y-1 border-t border-sidebar-border p-3">
+        {canAccessLogisticsProvider() && (
+          <NavLink
+            to="/logistics-provider"
+            className={({ isActive }) =>
+              cn(
+                'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                isActive ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+              )
+            }
+          >
+            <Truck className="h-[18px] w-[18px] shrink-0" />
+            {!collapsed && <span>Logistics Provider</span>}
+          </NavLink>
+        )}
         {isSuperAdmin() && (
           <NavLink
             to="/admin"
@@ -312,6 +328,21 @@ export function MobileSidebar({ open, onClose }: { open: boolean; onClose: () =>
               </NavLink>
             );
           })}
+          {canAccessLogisticsProvider() && (
+            <NavLink
+              to="/logistics-provider"
+              onClick={onClose}
+              className={({ isActive }) =>
+                cn(
+                  'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                  isActive ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                )
+              }
+            >
+              <Truck className="h-[18px] w-[18px]" />
+              <span>Logistics Provider</span>
+            </NavLink>
+          )}
           <NavLink
             to="/settings"
             onClick={onClose}

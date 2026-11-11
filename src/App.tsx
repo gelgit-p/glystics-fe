@@ -60,6 +60,16 @@ const SNAiPage = lazy(() => import('@/pages/shared-network/AiPage'));
 const SNAnalyticsPage = lazy(() => import('@/pages/shared-network/AnalyticsPage'));
 const SNSettingsPage = lazy(() => import('@/pages/shared-network/SettingsPage'));
 const AdminSharedNetworkPage = lazy(() => import('@/pages/admin/shared-network/AdminSharedNetworkPage'));
+const LPLayout = lazy(() => import('@/pages/logistics-provider/LogisticsProviderLayout'));
+const LPOverviewPage = lazy(() => import('@/pages/logistics-provider/OverviewPage'));
+const LPCapacityPage = lazy(() => import('@/pages/logistics-provider/CapacityPage'));
+const LPZonesPage = lazy(() => import('@/pages/logistics-provider/ZonesPage'));
+const LPReservationsPage = lazy(() => import('@/pages/logistics-provider/ReservationsPage'));
+const LPShipmentsPage = lazy(() => import('@/pages/logistics-provider/ShipmentsPage'));
+const LPFleetPage = lazy(() => import('@/pages/logistics-provider/FleetEarningsProfilePages').then((m) => ({ default: m.LogisticsFleetPage })));
+const LPEarningsPage = lazy(() => import('@/pages/logistics-provider/FleetEarningsProfilePages').then((m) => ({ default: m.LogisticsEarningsPage })));
+const LPProfilePage = lazy(() => import('@/pages/logistics-provider/FleetEarningsProfilePages').then((m) => ({ default: m.LogisticsProfilePage })));
+const LPMarketplacePage = lazy(() => import('@/pages/logistics-provider/MarketplacePage'));
 
 function PageLoader() {
   return <LoadingState text="Loading page..." />;
@@ -69,6 +79,11 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const accessToken = localStorage.getItem('accessToken');
 
   return accessToken ? children : <Navigate to="/login" replace />;
+}
+
+function LogisticsProviderRoute({ children }: { children: React.ReactNode }) {
+  // Server enforces LOGISTICS_PROVIDER (LogisticsProviderGuard re-reads DB role); this is UX gating only.
+  return localStorage.getItem('userRole') === 'LOGISTICS_PROVIDER' ? children : <Navigate to="/dashboard" replace />;
 }
 
 function SuperAdminRoute({ children }: { children: React.ReactNode }) {
@@ -150,6 +165,17 @@ export default function App() {
                 <Route path="/shared-network/ai" element={<SNAiPage />} />
                 <Route path="/shared-network/analytics" element={<SNAnalyticsPage />} />
                 <Route path="/shared-network/settings" element={<SNSettingsPage />} />
+              </Route>
+              <Route element={<LogisticsProviderRoute><LPLayout /></LogisticsProviderRoute>}>
+                <Route path="/logistics-provider" element={<LPOverviewPage />} />
+                <Route path="/logistics-provider/capacity" element={<LPCapacityPage />} />
+                <Route path="/logistics-provider/zones" element={<LPZonesPage />} />
+                <Route path="/logistics-provider/reservations" element={<LPReservationsPage />} />
+                <Route path="/logistics-provider/shipments" element={<LPShipmentsPage />} />
+                <Route path="/logistics-provider/fleet" element={<LPFleetPage />} />
+                <Route path="/logistics-provider/earnings" element={<LPEarningsPage />} />
+                <Route path="/logistics-provider/marketplace" element={<LPMarketplacePage />} />
+                <Route path="/logistics-provider/profile" element={<LPProfilePage />} />
               </Route>
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/settings/profile" element={<ProfileSettingsPage />} />

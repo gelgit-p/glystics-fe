@@ -34,7 +34,7 @@ export default function AdminUsersPage() {
       <PageHeader title="Users" description="Manage accounts, roles, suspension, credits, and AI detection." />
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <AdminSearch value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search name, business, email..." />
-        <Select value={roleFilter} onValueChange={setRoleFilter}><SelectTrigger className="w-44"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="ALL">All roles</SelectItem><SelectItem value="USER">USER</SelectItem><SelectItem value="SUPER_ADMIN">SUPER_ADMIN</SelectItem></SelectContent></Select>
+        <Select value={roleFilter} onValueChange={setRoleFilter}><SelectTrigger className="w-44"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="ALL">All roles</SelectItem><SelectItem value="USER">USER</SelectItem><SelectItem value="SUPER_ADMIN">SUPER_ADMIN</SelectItem><SelectItem value="LOGISTICS_PROVIDER">LOGISTICS_PROVIDER</SelectItem></SelectContent></Select>
       </div>
       <div className="overflow-x-auto rounded-xl border bg-card">
         <table className="w-full min-w-[900px] text-sm">
@@ -51,6 +51,7 @@ export default function AdminUsersPage() {
                 <td className="p-3">
                   <div className="flex flex-wrap gap-2">
                     <Button size="sm" variant="outline" disabled={setRole.isPending} onClick={() => setRole.mutate(u)}>{u.role === 'SUPER_ADMIN' ? 'Demote' : 'Promote'}</Button>
+                    <Button size="sm" variant="outline" disabled={setRole.isPending} onClick={() => adminApi.setRole(u.id, u.role === 'LOGISTICS_PROVIDER' ? 'USER' : 'LOGISTICS_PROVIDER').then(() => { toast.success('Role updated'); invalidate(); }).catch((e: Error) => toast.error(e.message))}>{u.role === 'LOGISTICS_PROVIDER' ? 'Remove provider' : 'Make provider'}</Button>
                     <Button size="sm" variant="outline" disabled={setSuspended.isPending} onClick={() => setSuspended.mutate(u)}>{u.emailConfirmed ? 'Suspend' : 'Reactivate'}</Button>
                     <CreditAdjustDialog userId={u.id} onSubmit={(amount, description) => adjust.mutate({ id: u.id, amount, description })} pending={adjust.isPending} />
                     <AlertDialog>
