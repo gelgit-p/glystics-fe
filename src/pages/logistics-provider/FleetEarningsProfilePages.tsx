@@ -115,7 +115,7 @@ export function LogisticsProfilePage() {
         <div className="grid gap-4 sm:grid-cols-3">
           <Field label="Payout bank" value={f.payoutBankName ?? ''} onChange={(v) => set('payoutBankName', v)} />
           <Field label="Account name" value={f.payoutAccountName ?? ''} onChange={(v) => set('payoutAccountName', v)} />
-          <Field label={q.data?.payoutAccountLast4 ? `Account number (current ••••${q.data.payoutAccountLast4})` : 'Account number (only last 4 stored)'} value={f.payoutAccountNumber ?? ''} onChange={(v) => set('payoutAccountNumber', v)} />
+          <Field label={q.data?.payoutAccountLast4 ? `Account number (current ••••${q.data.payoutAccountLast4})` : 'Account number'} value={f.payoutAccountNumber ?? ''} onChange={(v) => set('payoutAccountNumber', v)} />
         </div>
         <Button disabled={save.isPending || !f.companyName || !f.contactName} onClick={() => save.mutate()}>Save profile</Button>
         {q.data?.verificationNote && <p className="text-sm text-muted-foreground">Admin note: {q.data.verificationNote}</p>}
