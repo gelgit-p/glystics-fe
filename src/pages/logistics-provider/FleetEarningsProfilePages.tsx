@@ -75,7 +75,7 @@ export function LogisticsEarningsPage() {
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
         <Card><CardHeader><CardTitle className="text-base">Request payout</CardTitle></CardHeader><CardContent className="space-y-4 text-sm">
-          <p className="text-muted-foreground">Bank: {e.payoutBank?.bankName ?? '—'} · {e.payoutBank?.accountName ?? ''} {e.payoutBank?.accountLast4 ? `••••${e.payoutBank.accountLast4}` : '(add bank details in Profile)'}</p>
+          <p className="text-muted-foreground">Bank: {e.payoutBank?.bankName ?? '—'} · {e.payoutBank?.accountName ?? ''} {e.payoutBank?.accountNumber ?? '(add bank details in Profile)'}</p>
           <Field label="Amount (₦)" type="number" value={amount} onChange={setAmount} />
           <Button disabled={!amount || payout.isPending} onClick={() => payout.mutate()}>Request withdrawal</Button>
         </CardContent></Card>
@@ -115,7 +115,7 @@ export function LogisticsProfilePage() {
         <div className="grid gap-4 sm:grid-cols-3">
           <Field label="Payout bank" value={f.payoutBankName ?? ''} onChange={(v) => set('payoutBankName', v)} />
           <Field label="Account name" value={f.payoutAccountName ?? ''} onChange={(v) => set('payoutAccountName', v)} />
-          <Field label={q.data?.payoutAccountLast4 ? `Account number (current ••••${q.data.payoutAccountLast4})` : 'Account number'} value={f.payoutAccountNumber ?? ''} onChange={(v) => set('payoutAccountNumber', v)} />
+          <Field label="Account number" value={f.payoutAccountNumber ?? ''} onChange={(v) => set('payoutAccountNumber', v)} placeholder="e.g. 8123450094" />
         </div>
         <Button disabled={save.isPending || !f.companyName || !f.contactName} onClick={() => save.mutate()}>Save profile</Button>
         {q.data?.verificationNote && <p className="text-sm text-muted-foreground">Admin note: {q.data.verificationNote}</p>}

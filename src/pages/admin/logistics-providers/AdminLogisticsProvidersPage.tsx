@@ -71,9 +71,9 @@ export default function AdminLogisticsProvidersPage() {
               <p><span className="text-muted-foreground">Services:</span> {(p.servicesOffered ?? []).join(', ') || '—'}</p>
               <p><span className="text-muted-foreground">Capacity / reservations:</span> {p._count?.capacities ?? 0} / {p._count?.reservations ?? 0}</p>
               <p><span className="text-muted-foreground">Payout bank:</span>{' '}
-                {p.payoutBankName || p.payoutAccountLast4 ? (
+                {p.payoutBankName || p.payoutAccountNumber ? (
                   <button type="button" onClick={() => setPayoutProvider(p)} title="View payout bank details" className="font-medium text-primary underline decoration-dotted underline-offset-2 hover:opacity-80">
-                    {p.payoutBankName ?? 'Bank'} {p.payoutAccountLast4 ? `••••${p.payoutAccountLast4}` : ''} <Eye className="inline h-3.5 w-3.5" />
+                    {p.payoutBankName ?? 'Bank'} {p.payoutAccountNumber ?? ''} <Eye className="inline h-3.5 w-3.5" />
                   </button>
                 ) : '—'}
               </p>
@@ -140,19 +140,19 @@ export default function AdminLogisticsProvidersPage() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><Landmark className="h-4 w-4" />Payout bank details — {payoutProvider?.companyName}</DialogTitle>
-            <DialogDescription>For your own safety, Dispatchly only stores the last 4 digits of the account number — the full number never leaves the provider's bank/payment flow.</DialogDescription>
+            <DialogDescription>The provider's full payout account number, exactly as saved on their profile. Handle it as sensitive banking data.</DialogDescription>
           </DialogHeader>
           {payoutProvider && (
             <div className="space-y-3 text-sm">
               <div className="flex items-center justify-between rounded-lg border p-3"><span className="text-muted-foreground">Bank</span><span className="font-semibold uppercase">{payoutProvider.payoutBankName ?? '—'}</span></div>
               <div className="flex items-center justify-between gap-2 rounded-lg border p-3">
                 <span className="text-muted-foreground">Account number</span>
-                <span className="flex items-center gap-2 font-mono text-base font-semibold">••••{payoutProvider.payoutAccountLast4 ?? '————'}
-                  <Button size="sm" variant="ghost" disabled={!payoutProvider.payoutAccountLast4} onClick={() => { void navigator.clipboard?.writeText(payoutProvider.payoutAccountLast4 ?? ''); toast.success('Last 4 digits copied'); }}><Copy className="h-3.5 w-3.5" /></Button>
+                <span className="flex items-center gap-2 font-mono text-base font-semibold">{payoutProvider.payoutAccountNumber ?? '—'}
+                  <Button size="sm" variant="ghost" disabled={!payoutProvider.payoutAccountNumber} onClick={() => { void navigator.clipboard?.writeText(payoutProvider.payoutAccountNumber ?? ''); toast.success('Account number copied'); }}><Copy className="h-3.5 w-3.5" /></Button>
                 </span>
               </div>
               <div className="flex items-center justify-between rounded-lg border p-3"><span className="text-muted-foreground">Account name</span><span className="font-medium">{payoutProvider.payoutAccountName ?? '—'}</span></div>
-              <p className="text-xs text-muted-foreground">To verify the full account number, confirm it directly with the provider ({payoutProvider.businessEmail} · {payoutProvider.phoneNumber}). Use the masked number above to match payouts.</p>
+              <p className="text-xs text-muted-foreground">Use this account number when sending payouts to {payoutProvider.companyName}. Provider contact: {payoutProvider.businessEmail} · {payoutProvider.phoneNumber}.</p>
             </div>
           )}
         </DialogContent>

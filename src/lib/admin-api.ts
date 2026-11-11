@@ -63,7 +63,7 @@ export interface LogisticsProviderAdmin {
   id: string; userId: string; companyName: string; registrationNumber?: string | null; contactName: string;
   businessEmail: string; phoneNumber: string; businessAddress: string; operatingRegions: string[]; servicesOffered: string[];
   fleetSize: number; description?: string | null; verificationStatus: string; verificationNote?: string | null;
-  payoutBankName?: string | null; payoutAccountName?: string | null; payoutAccountLast4?: string | null;
+  payoutBankName?: string | null; payoutAccountName?: string | null; payoutAccountNumber?: string | null;
   createdAt: string; updatedAt: string;
   user?: { id: string; email: string; role: string } | null;
   documents: LogisticsProviderDocument[];
