@@ -123,7 +123,7 @@ export function LogisticsProfilePage() {
       <Card><CardHeader><CardTitle className="text-base">Verification documents</CardTitle></CardHeader><CardContent className="space-y-4 text-sm">
         {(q.data?.documents ?? []).map((d: AnyRecord) => <p key={d.id}><a className="text-primary hover:underline" href={d.url} target="_blank" rel="noreferrer">{d.name}</a> · {fmtDate(d.createdAt)}</p>)}
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Document name" value={doc.name} onChange={(v) => setDoc({ ...doc, name: v })} placeholder="CAC certificate" />
+          <Field label="CAC No" value={doc.name} onChange={(v) => setDoc({ ...doc, name: v })} placeholder="e.g. RC1234567" />
           <Field label="Document URL" value={doc.url} onChange={(v) => setDoc({ ...doc, url: v })} placeholder="https://…" />
         </div>
         <Button disabled={!q.data || !doc.name || !doc.url || addDoc.isPending} onClick={() => addDoc.mutate()}>Submit document for review</Button>
