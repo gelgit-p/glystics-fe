@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Building2, CheckCircle2, ExternalLink, Eye, ShieldAlert, XCircle } from 'lucide-react';
+import { Building2, CheckCircle2, Copy, ExternalLink, Eye, Landmark, ShieldAlert, XCircle } from 'lucide-react';
 import { PageHeader, StatusBadge } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,8 +22,10 @@ function isPreviewable(url: string) {
 
 export default function AdminLogisticsProvidersPage() {
   const qc = useQueryClient();
-  const [status, setStatus] = useState('ALL');
+  // Default tab: pending verification queue first — it's the actionable worklist.
+  const [status, setStatus] = useState('PENDING_VERIFICATION');
   const [preview, setPreview] = useState<{ provider: LogisticsProviderAdmin; doc: LogisticsProviderDocument } | null>(null);
+  const [payoutProvider, setPayoutProvider] = useState<LogisticsProviderAdmin | null>(null);
   const [notes, setNotes] = useState<Record<string, string>>({});
   const { data, isLoading, error, refetch } = useQuery({ queryKey: ['admin-logistics-providers'], queryFn: adminApi.logisticsProviders });
   const invalidate = () => qc.invalidateQueries({ queryKey: ['admin-logistics-providers'] });
@@ -68,7 +70,13 @@ export default function AdminLogisticsProvidersPage() {
               <p><span className="text-muted-foreground">Regions:</span> {(p.operatingRegions ?? []).join(', ') || '—'} · <span className="text-muted-foreground">Fleet:</span> {p.fleetSize}</p>
               <p><span className="text-muted-foreground">Services:</span> {(p.servicesOffered ?? []).join(', ') || '—'}</p>
               <p><span className="text-muted-foreground">Capacity / reservations:</span> {p._count?.capacities ?? 0} / {p._count?.reservations ?? 0}</p>
-              <p><span className="text-muted-foreground">Payout bank:</span> {p.payoutBankName ?? '—'}{p.payoutAccountLast4 ? ` ••••${p.payoutAccountLast4}` : ''}</p>
+              <p><span className="text-muted-foreground">Payout bank:</span>{' '}
+                {p.payoutBankName || p.payoutAccountLast4 ? (
+                  <button type="button" onClick={() => setPayoutProvider(p)} title="View payout bank details" className="font-medium text-primary underline decoration-dotted underline-offset-2 hover:opacity-80">
+                    {p.payoutBankName ?? 'Bank'} {p.payoutAccountLast4 ? `••••${p.payoutAccountLast4}` : ''} <Eye className="inline h-3.5 w-3.5" />
+                  </button>
+                ) : '—'}
+              </p>
               <p><span className="text-muted-foreground">Submitted:</span> {fmtDate(p.createdAt)}</p>
             </div>
             {p.description && <p className="text-muted-foreground">{p.description}</p>}
@@ -123,6 +131,28 @@ export default function AdminLogisticsProvidersPage() {
                 <Button variant="outline" asChild><a href={preview.doc.url} target="_blank" rel="noreferrer"><ExternalLink className="mr-1 h-4 w-4" />Open link in new tab</a></Button>
                 <Button variant="outline" onClick={() => decide.mutate({ p: preview.provider, action: 'REJECTED' })}>Reject</Button>
               </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(payoutProvider)} onOpenChange={(open) => { if (!open) setPayoutProvider(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Landmark className="h-4 w-4" />Payout bank details — {payoutProvider?.companyName}</DialogTitle>
+            <DialogDescription>For your own safety, Dispatchly only stores the last 4 digits of the account number — the full number never leaves the provider's bank/payment flow.</DialogDescription>
+          </DialogHeader>
+          {payoutProvider && (
+            <div className="space-y-3 text-sm">
+              <div className="flex items-center justify-between rounded-lg border p-3"><span className="text-muted-foreground">Bank</span><span className="font-semibold uppercase">{payoutProvider.payoutBankName ?? '—'}</span></div>
+              <div className="flex items-center justify-between gap-2 rounded-lg border p-3">
+                <span className="text-muted-foreground">Account number</span>
+                <span className="flex items-center gap-2 font-mono text-base font-semibold">••••{payoutProvider.payoutAccountLast4 ?? '————'}
+                  <Button size="sm" variant="ghost" disabled={!payoutProvider.payoutAccountLast4} onClick={() => { void navigator.clipboard?.writeText(payoutProvider.payoutAccountLast4 ?? ''); toast.success('Last 4 digits copied'); }}><Copy className="h-3.5 w-3.5" /></Button>
+                </span>
+              </div>
+              <div className="flex items-center justify-between rounded-lg border p-3"><span className="text-muted-foreground">Account name</span><span className="font-medium">{payoutProvider.payoutAccountName ?? '—'}</span></div>
+              <p className="text-xs text-muted-foreground">To verify the full account number, confirm it directly with the provider ({payoutProvider.businessEmail} · {payoutProvider.phoneNumber}). Use the masked number above to match payouts.</p>
             </div>
           )}
         </DialogContent>

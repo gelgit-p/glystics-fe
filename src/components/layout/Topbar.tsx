@@ -24,6 +24,7 @@ import {
 import { Avatar,
   AvatarFallback,
 } from '@/components/ui/avatar';
+import { useAdminNotifications } from '@/lib/use-admin-notifications';
 
 interface UserDetails {
   fullName: string;
@@ -55,6 +56,48 @@ const pageTitles: Record<string, string> = {
   '/settings/webhooks': 'Settings · Webhooks',
   '/settings/security': 'Settings · Security',
 };
+
+function NotificationBell() {
+  const navigate = useNavigate();
+  const { items, unread, markAllRead, clear, enabled } = useAdminNotifications();
+  const isAdminArea = typeof window !== 'undefined' && window.location.pathname.startsWith('/admin');
+  // SUPER_ADMIN pending-verification bell (websocket); other users keep the plain notifications bell.
+  if (!enabled || !isAdminArea) {
+    return (
+      <Hint label="Notifications">
+        <button type="button" aria-label="Notifications" onClick={() => navigate('/notifications')} className="relative rounded-lg p-2 text-muted-foreground hover:bg-muted">
+          <Bell className="h-[18px] w-[18px]" />
+        </button>
+      </Hint>
+    );
+  }
+  return (
+    <DropdownMenu onOpenChange={(open) => { if (open) markAllRead(); }}>
+      <DropdownMenuTrigger asChild>
+        <button type="button" aria-label={`Notifications${unread ? `, ${unread} unread` : ''}`} className="relative rounded-lg p-2 text-muted-foreground hover:bg-muted">
+          <Bell className="h-[18px] w-[18px]" />
+          {unread > 0 && <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">{unread}</span>}
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-80">
+        <div className="flex items-center justify-between px-2 py-1.5">
+          <p className="text-sm font-semibold">Pending verifications</p>
+          {items.length > 0 && <button type="button" className="text-xs text-muted-foreground hover:underline" onClick={clear}>Clear</button>}
+        </div>
+        <DropdownMenuSeparator />
+        {items.length === 0 && <p className="px-2 py-4 text-sm text-muted-foreground">No new verification requests. You'll get a live alert here when a provider submits documents.</p>}
+        {items.slice(0, 8).map((n) => (
+          <DropdownMenuItem key={n.id} className="cursor-pointer flex-col items-start gap-0.5" onClick={() => navigate('/admin/logistics-providers')}>
+            <span className="flex w-full items-center gap-2 text-sm font-medium">{!n.read && <span className="h-2 w-2 shrink-0 rounded-full bg-red-500" />}{n.companyName}</span>
+            <span className="text-xs text-muted-foreground">Verification pending — CAC {n.documentName || 'submitted'} · {new Date(n.submittedAt).toLocaleString('en-NG')}</span>
+          </DropdownMenuItem>
+        ))}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem className="cursor-pointer" onClick={() => navigate('/admin/logistics-providers')}>Review pending verifications</DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
 
 export function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
   const navigate = useNavigate();
@@ -150,12 +193,7 @@ export function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
           <span className="truncate">{user?.businessName || 'Business'}</span>
         </div>
 
-        <Hint label="Notifications">
-          <button type="button" aria-label="Notifications" className="relative rounded-lg p-2 text-muted-foreground hover:bg-muted">
-            <Bell className="h-[18px] w-[18px]" />
-            <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-primary ring-2 ring-background" />
-          </button>
-        </Hint>
+        <NotificationBell />
 
         <Hint label="Help & support">
           <button type="button" aria-label="Help and support" className="rounded-lg p-2 text-muted-foreground hover:bg-muted">
