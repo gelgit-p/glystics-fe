@@ -1,9 +1,21 @@
-import { NavLink, Outlet, Navigate } from 'react-router-dom';
+import { NavLink, Outlet, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { LayoutDashboard, Layers, MapPin, CalendarCheck, Package, Users, Wallet, Building2, Store } from 'lucide-react';
+import { LayoutDashboard, Layers, LockKeyhole, MapPin, CalendarCheck, Package, Users, Wallet, Building2, Store } from 'lucide-react';
 import { canAccessLogisticsProvider, logisticsProviderApi } from '@/lib/logistics-provider-api';
-import { LoadingState } from '@/components/shared';
+import { EmptyState, LoadingState } from '@/components/shared';
+import { Hint } from '@/components/ui/hint';
 import { cn } from '@/lib/utils';
+
+// Sections locked while verification is REJECTED — only Overview and Profile (fix & resubmit) stay usable.
+export const REJECTED_LOCKED_ROUTES = [
+  '/logistics-provider/capacity',
+  '/logistics-provider/zones',
+  '/logistics-provider/reservations',
+  '/logistics-provider/shipments',
+  '/logistics-provider/fleet',
+  '/logistics-provider/earnings',
+  '/logistics-provider/marketplace',
+];
 
 const nav = [
   { to: '/logistics-provider', label: 'Overview', icon: LayoutDashboard, end: true },
@@ -18,9 +30,13 @@ const nav = [
 ];
 
 export default function LogisticsProviderLayout() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const q = useQuery({ queryKey: ['lp-profile'], queryFn: logisticsProviderApi.profile });
   if (!canAccessLogisticsProvider()) return <Navigate to="/dashboard" replace />;
   if (q.isLoading) return <LoadingState text="Loading Logistics Provider dashboard..." />;
+  const rejected = q.data?.verificationStatus === 'REJECTED';
+  const lockedHere = rejected && REJECTED_LOCKED_ROUTES.some((r) => location.pathname.startsWith(r));
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -32,10 +48,29 @@ export default function LogisticsProviderLayout() {
           </div>
         </div>
       </div>
+      {rejected && (
+        <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
+          Your provider verification was <strong>rejected</strong>{q.data?.verificationNote ? <> — {q.data.verificationNote}</> : ''}. Capacity, Delivery Zones, Reservations, Shipments, Fleet, Earnings and Marketplace are disabled until Dispatchly approves a new submission. Update your details and resubmit your CAC document under <button type="button" className="font-medium underline" onClick={() => navigate('/logistics-provider/profile')}>Profile &amp; Verification</button>.
+        </p>
+      )}
       <nav className="flex gap-1 overflow-x-auto border-b border-border pb-px" aria-label="Logistics Provider">
-        {nav.map((i) => <NavLink key={i.to} to={i.to} end={i.end} className={({ isActive }) => cn('flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium', isActive ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground')}><i.icon className="h-4 w-4" />{i.label}</NavLink>)}
+        {nav.map((i) => {
+          const locked = rejected && REJECTED_LOCKED_ROUTES.includes(i.to);
+          if (locked) {
+            return (
+              <Hint key={i.to} label="Disabled — verification rejected. Resubmit your documents in Profile & Verification." className="shrink-0">
+                <button type="button" disabled aria-disabled="true" className="flex cursor-not-allowed items-center gap-2 whitespace-nowrap border-b-2 border-transparent px-3 py-2 text-sm font-medium text-muted-foreground opacity-50">
+                  <i.icon className="h-4 w-4" />{i.label}<LockKeyhole className="h-3.5 w-3.5" />
+                </button>
+              </Hint>
+            );
+          }
+          return <NavLink key={i.to} to={i.to} end={i.end} className={({ isActive }) => cn('flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium', isActive ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground')}><i.icon className="h-4 w-4" />{i.label}</NavLink>;
+        })}
       </nav>
-      <Outlet />
+      {lockedHere
+        ? <EmptyState icon={LockKeyhole} title="Section disabled — verification rejected" description="This section unlocks once Dispatchly approves your verification. Please update your profile and resubmit your CAC document." action={<button type="button" className="text-sm font-medium text-primary hover:underline" onClick={() => navigate('/logistics-provider/profile')}>Go to Profile & Verification</button>} />
+        : <Outlet />}
     </div>
   );
 }
