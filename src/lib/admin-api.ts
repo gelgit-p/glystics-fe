@@ -70,6 +70,7 @@ export const adminApi = {
   users: (p: { search?: string; page?: number; limit?: number }) => req<Paged<PlatformUser>>(`/admin/users${q(p)}`),
   user: (id: string) => req<any>(`/admin/users/${id}`),
   setRole: (id: string, role: 'USER' | 'SUPER_ADMIN' | 'LOGISTICS_PROVIDER') => req(`/admin/users/${id}/role`, { method: 'PATCH', body: JSON.stringify({ role }) }),
+  setLogisticsProvider: (id: string, enabled: boolean) => req(`/admin/users/${id}/logistics-provider`, { method: 'PATCH', body: JSON.stringify({ enabled }) }),
   setSuspended: (id: string, suspended: boolean) => req(`/admin/users/${id}/suspend`, { method: 'PATCH', body: JSON.stringify({ suspended }) }),
   setDetection: (id: string, aiDeliveryDetectionEnabled: boolean) => req(`/admin/users/${id}/ai-detection`, { method: 'PATCH', body: JSON.stringify({ aiDeliveryDetectionEnabled }) }),
   deleteUser: (id: string) => req(`/admin/users/${id}`, { method: 'DELETE' }),
