@@ -147,7 +147,8 @@ export default function AdminLogisticsProvidersPage() {
               <div className="flex items-center justify-between rounded-lg border p-3"><span className="text-muted-foreground">Bank</span><span className="font-semibold uppercase">{payoutProvider.payoutBankName ?? '—'}</span></div>
               <div className="flex items-center justify-between gap-2 rounded-lg border p-3">
                 <span className="text-muted-foreground">Account number</span>
-                <span className="flex items-center gap-2 font-mono text-base font-semibold">{payoutProvider.payoutAccountNumber ?? '—'}
+                <span className="flex items-center gap-2 font-mono text-base font-semibold">
+                  {payoutProvider.payoutAccountNumber && payoutProvider.payoutAccountNumber.length > 4 ? payoutProvider.payoutAccountNumber : payoutProvider.payoutAccountNumber ? `${payoutProvider.payoutAccountNumber} (last 4 only — provider must re-save profile with the full number)` : 'Not provided yet — ask the provider to add payout bank details in their profile'}
                   <Button size="sm" variant="ghost" disabled={!payoutProvider.payoutAccountNumber} onClick={() => { void navigator.clipboard?.writeText(payoutProvider.payoutAccountNumber ?? ''); toast.success('Account number copied'); }}><Copy className="h-3.5 w-3.5" /></Button>
                 </span>
               </div>
