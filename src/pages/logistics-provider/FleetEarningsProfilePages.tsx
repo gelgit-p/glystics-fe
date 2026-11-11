@@ -94,7 +94,7 @@ export function LogisticsProfilePage() {
   const f: AnyRecord = loaded ? { ...loaded, operatingRegions: (loaded.operatingRegions ?? []).join(', '), servicesOffered: (loaded.servicesOffered ?? []).join(', ') } : form;
   const set = (k: string, v: string) => setForm({ ...f, [k]: v });
   const save = useMutation({ mutationFn: () => logisticsProviderApi.saveProfile({ companyName: f.companyName, registrationNumber: f.registrationNumber || undefined, contactName: f.contactName, businessEmail: f.businessEmail, phoneNumber: f.phoneNumber, businessAddress: f.businessAddress, operatingRegions: String(f.operatingRegions ?? '').split(',').map((s: string) => s.trim()).filter(Boolean), servicesOffered: String(f.servicesOffered ?? '').split(',').map((s: string) => s.trim()).filter(Boolean), fleetSize: Number(f.fleetSize ?? 0), description: f.description || undefined, payoutBankName: f.payoutBankName || undefined, payoutAccountName: f.payoutAccountName || undefined, payoutAccountNumber: f.payoutAccountNumber || undefined }), onSuccess: () => { toast.success('Profile saved'); qc.invalidateQueries({ queryKey: ['lp-profile'] }); }, onError: (e: Error) => toast.error(e.message) });
-  const addDoc = useMutation({ mutationFn: () => logisticsProviderApi.addDocument(doc), onSuccess: () => { toast.success('Document submitted for verification'); setDoc({ name: '', url: '' }); qc.invalidateQueries({ queryKey: ['lp-profile'] }); }, onError: (e: Error) => toast.error(e.message) });
+  const addDoc = useMutation({ mutationFn: () => logisticsProviderApi.addDocument(doc), onSuccess: () => { toast.success('Document submitted — verification normally takes within the hour'); setDoc({ name: '', url: '' }); qc.invalidateQueries({ queryKey: ['lp-profile'] }); }, onError: (e: Error) => toast.error(e.message) });
   if (q.isLoading) return <LoadingState text="Loading profile..." />;
   return (
     <div className="space-y-6">
@@ -121,6 +121,7 @@ export function LogisticsProfilePage() {
         {q.data?.verificationNote && <p className="text-sm text-muted-foreground">Admin note: {q.data.verificationNote}</p>}
       </CardContent></Card>
       <Card><CardHeader><CardTitle className="text-base">Verification documents</CardTitle></CardHeader><CardContent className="space-y-4 text-sm">
+        <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200">Verification normally takes within the hour once your CAC details and document are submitted. We'll notify you as soon as a Dispatchly admin approves your verification — only verified providers can publish bookable capacity.</p>
         {(q.data?.documents ?? []).map((d: AnyRecord) => <p key={d.id}><a className="text-primary hover:underline" href={d.url} target="_blank" rel="noreferrer">{d.name}</a> · {fmtDate(d.createdAt)}</p>)}
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="CAC No" value={doc.name} onChange={(v) => setDoc({ ...doc, name: v })} placeholder="e.g. RC1234567" />

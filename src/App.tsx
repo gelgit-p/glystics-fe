@@ -60,6 +60,7 @@ const SNAiPage = lazy(() => import('@/pages/shared-network/AiPage'));
 const SNAnalyticsPage = lazy(() => import('@/pages/shared-network/AnalyticsPage'));
 const SNSettingsPage = lazy(() => import('@/pages/shared-network/SettingsPage'));
 const AdminSharedNetworkPage = lazy(() => import('@/pages/admin/shared-network/AdminSharedNetworkPage'));
+const AdminLogisticsProvidersPage = lazy(() => import('@/pages/admin/logistics-providers/AdminLogisticsProvidersPage'));
 const LPLayout = lazy(() => import('@/pages/logistics-provider/LogisticsProviderLayout'));
 const LPOverviewPage = lazy(() => import('@/pages/logistics-provider/OverviewPage'));
 const LPCapacityPage = lazy(() => import('@/pages/logistics-provider/CapacityPage'));
@@ -136,6 +137,7 @@ export default function App() {
               <Route path="/admin/ai" element={<AdminAiPage />} />
               <Route path="/admin/ai/conversations/:id" element={<AdminAiConversationPage />} />
               <Route path="/admin/shared-network" element={<AdminSharedNetworkPage />} />
+              <Route path="/admin/logistics-providers" element={<AdminLogisticsProvidersPage />} />
             </Route>
 
             <Route element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>

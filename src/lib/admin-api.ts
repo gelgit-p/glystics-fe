@@ -58,6 +58,19 @@ export interface PlatformTemplate { id: string; name: string; language: string; 
 export interface PlatformAutomation { id: string; name: string; trigger: string; triggerValue?: string | null; action: string; actionTemplate: string; enabled: boolean; totalRuns: number; lastTriggered?: string | null; user: { id: string; email: string; businessName: string } | null; }
 export interface PlatformWaConnection { id: string; email: string; businessName: string; facebookConnectStatus: boolean; webhookStatus: boolean; selectedWabaId?: string | null; selectedFacebookBusinessName?: string | null; displayPhoneNumber?: string | null; selectedPhoneNumberId: string[]; selectedPhoneNumberQualityRating?: string | null; }
 
+export interface LogisticsProviderDocument { id: string; name: string; url: string; createdAt: string; }
+export interface LogisticsProviderAdmin {
+  id: string; userId: string; companyName: string; registrationNumber?: string | null; contactName: string;
+  businessEmail: string; phoneNumber: string; businessAddress: string; operatingRegions: string[]; servicesOffered: string[];
+  fleetSize: number; description?: string | null; verificationStatus: string; verificationNote?: string | null;
+  payoutBankName?: string | null; payoutAccountName?: string | null; payoutAccountLast4?: string | null;
+  createdAt: string; updatedAt: string;
+  user?: { id: string; email: string; role: string } | null;
+  documents: LogisticsProviderDocument[];
+  _count?: { capacities: number; reservations: number };
+}
+export type LogisticsVerificationAction = 'VERIFIED' | 'REJECTED' | 'SUSPENDED' | 'PENDING_VERIFICATION';
+
 const q = (params: Record<string, unknown>) => {
   const sp = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) if (v !== undefined && v !== '' && v !== null) sp.set(k, String(v));
@@ -91,6 +104,8 @@ export const adminApi = {
   whatsapp: (p: { search?: string; page?: number; limit?: number }) => req<Paged<PlatformWaConnection>>(`/admin/whatsapp/connections${q(p)}`),
   whatsappActivity: (userId?: string, limit = 50) => req<any>(`/admin/whatsapp/activity${q({ userId, limit })}`),
   disconnectWhatsapp: (userId: string) => req(`/admin/whatsapp/${userId}/disconnect`, { method: 'POST' }),
+  logisticsProviders: () => req<LogisticsProviderAdmin[]>('/admin/logistics-providers'),
+  setProviderVerification: (id: string, status: LogisticsVerificationAction, note?: string) => req<LogisticsProviderAdmin>(`/admin/logistics-providers/${id}/verification`, { method: 'PATCH', body: JSON.stringify({ status, note }) }),
   aiAgents: (p: { search?: string; page?: number; limit?: number }) => req<any>(`/admin/ai/agents${q(p)}`),
   aiConversation: (id: string) => req<any>(`/admin/ai/conversations/${id}`),
 };

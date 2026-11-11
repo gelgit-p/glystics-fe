@@ -13,6 +13,7 @@ import {
   ChevronLeft,
   ArrowLeftRight,
   Network,
+  Truck,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { MobileBottomNav, MobileSidebar } from './Sidebar';
@@ -29,6 +30,7 @@ const adminNav = [
   { to: '/admin/whatsapp', label: 'WhatsApp', icon: MessageCircle },
   { to: '/admin/ai', label: 'AI Agents', icon: Bot },
   { to: '/admin/shared-network', label: 'Shared Network', icon: Network },
+  { to: '/admin/logistics-providers', label: 'Logistics Providers', icon: Truck },
 ];
 
 export function AdminLayout() {
