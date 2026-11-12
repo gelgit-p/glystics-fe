@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { canAccessLogisticsProvider } from '@/lib/logistics-provider-api';
 import { LogisticsProviderRoute } from './route-guard';
-import { REJECTED_LOCKED_ROUTES } from './LogisticsProviderLayout';
+import { REJECTED_LOCKED_ROUTES, SUSPENDED_LOCKED_ROUTES, isVerificationLocked } from './LogisticsProviderLayout';
 
 describe('Logistics Provider access (spec §1)', () => {
   beforeEach(() => localStorage.clear());
@@ -27,5 +27,14 @@ describe('Logistics Provider access (spec §1)', () => {
     ]);
     expect(REJECTED_LOCKED_ROUTES).not.toContain('/logistics-provider');
     expect(REJECTED_LOCKED_ROUTES).not.toContain('/logistics-provider/profile');
+  });
+  it('locks the same tabs when verification is SUSPENDED', () => {
+    expect(SUSPENDED_LOCKED_ROUTES).toEqual(REJECTED_LOCKED_ROUTES);
+    expect(isVerificationLocked('SUSPENDED')).toBe(true);
+    expect(isVerificationLocked('REJECTED')).toBe(true);
+    expect(isVerificationLocked('VERIFIED')).toBe(false);
+    expect(isVerificationLocked('PENDING_VERIFICATION')).toBe(false);
+    expect(isVerificationLocked('UNVERIFIED')).toBe(false);
+    expect(isVerificationLocked(undefined)).toBe(false);
   });
 });
