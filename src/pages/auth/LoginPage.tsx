@@ -53,7 +53,7 @@ export default function LoginPage() {
       const result = (await response.json()) as {
         accessToken?: string;
         refreshToken?: string;
-        user?: { id: string; role?: 'USER' | 'SUPER_ADMIN' };
+        user?: { id: string; role?: 'USER' | 'SUPER_ADMIN' | 'LOGISTICS_PROVIDER' };
        };
 
       if (!result.accessToken || !result.refreshToken || !result.user?.id) {

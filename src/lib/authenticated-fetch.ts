@@ -33,7 +33,7 @@ async function refreshAccessToken(): Promise<boolean> {
           typeof result.user.id === 'string'
         ) {
           localStorage.setItem('userId', result.user.id);
-          if ('role' in result.user && (result.user.role === 'USER' || result.user.role === 'SUPER_ADMIN')) {
+          if ('role' in result.user && (result.user.role === 'USER' || result.user.role === 'SUPER_ADMIN' || result.user.role === 'LOGISTICS_PROVIDER')) {
             localStorage.setItem('userRole', result.user.role);
           }
         }
