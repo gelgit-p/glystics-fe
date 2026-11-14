@@ -54,13 +54,6 @@ interface UserProfile {
   fullName: string;
 }
 
-function getGreeting(date: Date) {
-  const hour = date.getHours();
-  if (hour < 12) return 'Good morning';
-  if (hour < 17) return 'Good afternoon';
-  return 'Good evening';
-}
-
 function StatCard({
   label,
   value,
@@ -171,7 +164,7 @@ export default function DashboardPage() {
       {/* Greeting */}
       <div>
         <h1 className="text-2xl font-bold tracking-tight">
-          {getGreeting(currentTime)}, {userQuery.data?.fullName.trim().split(/\s+/)[0] || 'there'}
+          Ahoy, {userQuery.data?.fullName.trim().split(/\s+/)[0]}
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">Here's what's happening with your deliveries today.</p>
       </div>
