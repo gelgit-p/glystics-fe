@@ -55,6 +55,7 @@ function CourierCoverageDialog({ courier, onClose }: { courier: PublicCourier | 
                 <p className="mb-2 font-semibold">{a.country} ({a.countryCode})</p>
                 <p><span className="text-muted-foreground">Pickup states:</span> {a.pickupStates.length ? a.pickupStates.join(', ') : '—'}</p>
                 <p className="mt-1"><span className="text-muted-foreground">Delivery states:</span> {a.deliveryStates.length ? a.deliveryStates.join(', ') : '—'}</p>
+                {a.routes && a.routes.length > 0 && <p className="mt-1"><span className="text-muted-foreground">Routes:</span> {a.routes.map(titleCase).join(', ')}</p>}
               </div>
             ))}
           </div>

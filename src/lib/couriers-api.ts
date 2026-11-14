@@ -17,6 +17,7 @@ export interface CourierCoverageArea {
   countryCode: string;
   pickupStates: string[];
   deliveryStates: string[];
+  routes?: string[];
 }
 
 const base = () => import.meta.env.VITE_API_URL as string;
@@ -28,11 +29,10 @@ export const couriersApi = {
     const body: unknown = await res.json();
     return Array.isArray(body) ? (body as PublicCourier[]) : [];
   },
+  // Coverage is a GET upstream (Shipbubble) and on our API; POST there 404s in effect.
   async coverage(serviceCode: string): Promise<CourierCoverageArea[]> {
     const res = await fetch(`${base()}/public/couriers/${encodeURIComponent(serviceCode)}/coverage`, {
-      method: 'POST',
-      headers: { accept: 'application/json', 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
+      headers: { accept: 'application/json' },
     });
     if (!res.ok) throw new Error(`Could not load coverage (${res.status})`);
     const body: unknown = await res.json();
