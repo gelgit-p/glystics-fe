@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import {
   MessageCircle,
   ArrowRight,
@@ -24,6 +26,98 @@ import {
   FileText,
 } from 'lucide-react';
 import { CREDIT_PACKAGE_OFFERS, formatNaira } from '@/lib/credit-packages';
+import { couriersApi, type PublicCourier } from '@/lib/couriers-api';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+
+const titleCase = (s: string) => s.replace(/\b\w/g, (c) => c.toUpperCase());
+
+function CourierCoverageDialog({ courier, onClose }: { courier: PublicCourier | null; onClose: () => void }) {
+  const q = useQuery({
+    queryKey: ['public-courier-coverage', courier?.serviceCode],
+    queryFn: () => couriersApi.coverage(courier!.serviceCode),
+    enabled: Boolean(courier),
+    staleTime: 5 * 60_000,
+  });
+  return (
+    <Dialog open={Boolean(courier)} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>{courier?.name} — coverage areas</DialogTitle>
+          <DialogDescription>Countries and states this courier picks up from and delivers to.</DialogDescription>
+        </DialogHeader>
+        {q.isLoading && <p className="py-6 text-sm text-muted-foreground">Loading coverage areas…</p>}
+        {q.isError && <p className="py-6 text-sm text-red-600">Coverage could not be loaded. Please try again shortly.</p>}
+        {q.data && q.data.length === 0 && <p className="py-6 text-sm text-muted-foreground">No coverage areas published for this courier yet.</p>}
+        {q.data && q.data.length > 0 && (
+          <div className="max-h-[60vh] space-y-4 overflow-y-auto pr-1">
+            {q.data.map((a) => (
+              <div key={`${a.countryCode}-${a.country}`} className="rounded-lg border border-border p-4 text-sm">
+                <p className="mb-2 font-semibold">{a.country} ({a.countryCode})</p>
+                <p><span className="text-muted-foreground">Pickup states:</span> {a.pickupStates.length ? a.pickupStates.join(', ') : '—'}</p>
+                <p className="mt-1"><span className="text-muted-foreground">Delivery states:</span> {a.deliveryStates.length ? a.deliveryStates.join(', ') : '—'}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function CouriersSection() {
+  const [selected, setSelected] = useState<PublicCourier | null>(null);
+  const q = useQuery({ queryKey: ['public-couriers'], queryFn: couriersApi.list, staleTime: 5 * 60_000 });
+  return (
+    <section id="couriers" className="border-t border-border py-20">
+      <div className="mx-auto max-w-7xl px-4 lg:px-8">
+        <div className="mb-12 text-center">
+          <h2 className="text-3xl font-bold tracking-tight">Courier network</h2>
+          <p className="mt-2 text-muted-foreground">Live couriers available on Dispatchly through Shipbubble — check capabilities and coverage before you ship.</p>
+        </div>
+        {q.isLoading && <p className="text-center text-sm text-muted-foreground">Loading couriers…</p>}
+        {q.isError && <p className="text-center text-sm text-red-600">Courier list is unavailable right now. Please try again shortly.</p>}
+        {q.data && q.data.length === 0 && <p className="text-center text-sm text-muted-foreground">No couriers are available yet.</p>}
+        {q.data && q.data.length > 0 && (
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {q.data.map((c) => (
+              <article key={c.serviceCode} className="flex flex-col rounded-xl border border-border bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
+                <div className="mb-3 flex items-center gap-3">
+                  {c.pinImage
+                    ? <img src={c.pinImage} alt={c.name} className="h-11 w-11 rounded-lg object-cover" loading="lazy" />
+                    : <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-accent text-accent-foreground"><Truck className="h-5 w-5" /></div>}
+                  <div className="min-w-0">
+                    <h3 className="truncate font-semibold">{c.name}</h3>
+                    <p className="text-xs text-muted-foreground">{c.serviceCode} · Origin: {c.originCountry}</p>
+                  </div>
+                  <span className={`ml-auto shrink-0 rounded-full border px-2.5 py-0.5 text-xs font-medium ${c.operational ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-slate-50 text-slate-600'}`}>{c.operational ? 'Operational' : 'Not operational'}</span>
+                </div>
+                <div className="mb-3 flex flex-wrap gap-1.5">
+                  {c.domestic && <span className="rounded-full border px-2 py-0.5 text-xs text-muted-foreground">Domestic</span>}
+                  {c.international && <span className="rounded-full border px-2 py-0.5 text-xs text-muted-foreground">International</span>}
+                  {c.express && <span className="rounded-full border px-2 py-0.5 text-xs text-muted-foreground">Express</span>}
+                </div>
+                {c.packageCategories.length > 0 && (
+                  <p className="mb-4 text-xs text-muted-foreground">
+                    <span className="font-medium text-foreground">Package categories:</span>{' '}
+                    {c.packageCategories.slice(0, 6).map(titleCase).join(', ')}{c.packageCategories.length > 6 ? ` +${c.packageCategories.length - 6} more` : ''}
+                  </p>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setSelected(c)}
+                  className="mt-auto inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-white px-4 py-2 text-sm font-semibold transition-colors hover:bg-muted"
+                >
+                  <MapPin className="h-4 w-4" /> View coverage
+                </button>
+              </article>
+            ))}
+          </div>
+        )}
+      </div>
+      <CourierCoverageDialog courier={selected} onClose={() => setSelected(null)} />
+    </section>
+  );
+}
 
 const features = [
   { icon: Sparkles, title: 'Dispatchly AI agent', desc: 'An AI agent that reads WhatsApp conversations, detects delivery intent, and prepares deliveries for you.' },
@@ -61,6 +155,7 @@ export default function LandingPage() {
           <div className="hidden items-center gap-8 md:flex">
             <a href="#ai-agent" className="text-sm font-medium text-muted-foreground hover:text-foreground">AI Agent</a>
             <a href="#features" className="text-sm font-medium text-muted-foreground hover:text-foreground">Features</a>
+            <a href="#couriers" className="text-sm font-medium text-muted-foreground hover:text-foreground">Couriers</a>
             <Link to="/shared-network-info" className="text-sm font-medium text-muted-foreground hover:text-foreground">Shared Delivery Network</Link>
             <a href="#how-it-works" className="text-sm font-medium text-muted-foreground hover:text-foreground">How it works</a>
             <a href="#workflow" className="text-sm font-medium text-muted-foreground hover:text-foreground">Workflow</a>
@@ -356,6 +451,8 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      <CouriersSection />
 
       {/* CTA */}
       <section className="border-t border-border bg-primary py-20">

@@ -1,14 +1,17 @@
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, expect, it } from 'vitest';
 import LandingPage from './LandingPage';
 
 describe('Landing page advertises Dispatchly AI agent', () => {
   it('leads with AI hero, chat workflow and approval control', () => {
     render(
-      <MemoryRouter>
-        <LandingPage />
-      </MemoryRouter>,
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <MemoryRouter>
+          <LandingPage />
+        </MemoryRouter>
+      </QueryClientProvider>,
     );
     expect(screen.getByRole('heading', { name: /Your AI delivery agent on WhatsApp/i })).toBeInTheDocument();
     expect(screen.getAllByText(/Dispatchly AI/i).length).toBeGreaterThan(1);
